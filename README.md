@@ -1,12 +1,73 @@
 # ChokePoint
 
-ChokePoint is a production-grade open-source infrastructure dependency analyzer.
-It is intended to help teams understand critical dependencies, concentration
-risk, and architectural choke points across infrastructure systems.
+ChokePoint is a Python CLI tool that builds infrastructure dependency graphs
+and detects single points of failure using graph algorithms.
+
+It models services, databases, DNS providers, identity systems, cloud services,
+and external dependencies as a graph. ChokePoint then uses NetworkX analysis to
+find articulation points, bridge edges, blast radius, and dependency paths.
+
+## Quick Demo
+
+Run the analyzer against one of the included topology examples:
+
+```bash
+uv run chokepoint analyze examples/topology-microservices.yaml --markdown
+```
+
+The report shows:
+
+- a Mermaid dependency graph
+- hidden single points of failure
+- articulation points and bridge edges
+- blast radius and dependency chains
+- confidence, assessment, and evidence for findings
+
+## Core Features
+
+- Parses YAML infrastructure dependency files.
+- Builds a typed topology model with Pydantic.
+- Converts infrastructure dependencies into a NetworkX graph.
+- Detects articulation points, bridge edges, connected components, cycles, and
+  centrality.
+- Generates terminal, Markdown, JSON, CSV, and Mermaid reports.
+- Includes confidence-aware risk findings so graph artifacts are not overstated
+  as confirmed real-world issues.
+- Provides a Click/Rich CLI for local analysis.
+
+## Optional Experiments
+
+The project also includes optional parser and export adapters for broader
+experiments:
+
+- Docker Compose
+- Terraform and OpenTofu HCL
+- Terraform plan and state JSON
+- Kubernetes manifests
+- CloudFormation templates
+- Pulumi stack exports
+- SARIF, OpenAPI, HTML, Graphviz, and interactive HTML exports
+
+These adapters are useful for exploring real repositories, but they are not the
+main pitch. The main project story is the graph model and
+single-point-of-failure analysis.
+
+## What This Project Demonstrates
+
+ChokePoint is designed as a portfolio-friendly infrastructure graph analyzer. It
+demonstrates:
+
+- Python 3.12+ project structure
+- typed domain models
+- CLI design
+- graph algorithms
+- parser design
+- test coverage and CI
+- documentation and project hygiene
 
 ## Engineering Baseline
 
-The repository is initialized for Python 3.12+ with:
+The repository uses modern Python engineering practices:
 
 - `uv` for package and environment management
 - `pyproject.toml` as the single project configuration surface
@@ -46,22 +107,20 @@ uv run pre-commit install
 
 ## CLI
 
-Run ChokePoint from a YAML topology file:
+Common commands:
 
 ```bash
-chokepoint analyze topology.yaml
-chokepoint graph topology.yaml --json
-chokepoint report topology.yaml --markdown
-chokepoint validate topology.yaml
-chokepoint export topology.yaml --format sarif
-chokepoint export topology.yaml --format mermaid
-chokepoint diff before.yaml after.yaml --json
+uv run chokepoint analyze examples/topology-microservices.yaml
+uv run chokepoint graph examples/topology-microservices.yaml --json
+uv run chokepoint report examples/topology-microservices.yaml --markdown
+uv run chokepoint validate examples/topology-microservices.yaml
+uv run chokepoint export examples/topology-microservices.yaml --format mermaid
+uv run chokepoint diff examples/topology-basic.yaml examples/topology-expanded.yaml --json
 ```
 
 `analyze` and `report` explain the topology in terms of a visual dependency
-graph, hidden single points of failure, blast radius, and why each risky
-dependency matters. Markdown output includes a Mermaid graph that renders
-directly in GitHub security reports.
+graph, hidden single points of failure, blast radius, confidence, evidence, and
+why each risky dependency matters.
 
 Use `--verbose` before the command for colored diagnostic logs:
 
@@ -85,9 +144,9 @@ The supported YAML topology format is documented in
 Terraform ingestion is documented in
 [docs/terraform-parser.md](docs/terraform-parser.md).
 
-Advanced ingestion supports Kubernetes, CloudFormation, Docker Compose,
-Pulumi, OpenTofu, Terraform plan JSON, and Terraform state JSON through the
-parser API described in [docs/advanced-ingestion.md](docs/advanced-ingestion.md).
+Optional ingestion adapters for Kubernetes, CloudFormation, Docker Compose,
+Pulumi, OpenTofu, Terraform plan JSON, and Terraform state JSON are documented
+in [docs/advanced-ingestion.md](docs/advanced-ingestion.md).
 
 Terraform enrichment with YAML overlays is documented in
 [docs/enrichment.md](docs/enrichment.md).

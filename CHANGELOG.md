@@ -5,27 +5,47 @@ All notable changes to ChokePoint are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses semantic versioning.
 
+## [Unreleased]
+
+### Added
+
+- Evidence, confidence, and assessment metadata on risk findings and hidden
+  single-point-of-failure report records.
+- Export metadata for confidence, assessment, and evidence so automation can
+  distinguish confirmed findings from review-needed risks.
+
+### Changed
+
+- Downgrade Docker Compose's implicit `default` network to a modeling artifact
+  instead of reporting it as a high-risk shared networking dependency.
+- Improve CI/CD classification to avoid labeling CDN names such as `cdnjs` as
+  CI/CD dependencies.
+
 ## [1.0.0] - 2026-07-19
+
+Portfolio milestone focused on the core infrastructure graph model, CLI, and
+single-point-of-failure analysis. Optional parser/export adapters are included
+for exploration but are not the main focus.
 
 ### Added
 
 - Core `Topology`, `Node`, `Edge`, `NodeType`, and `Relationship` models.
 - YAML topology parsing with schema validation and helpful errors.
-- Terraform and OpenTofu HCL ingestion with provider/resource mapping.
-- Terraform plan JSON and state JSON ingestion.
-- Kubernetes, CloudFormation, Docker Compose, and Pulumi ingestion.
+- Basic Terraform-style and Docker Compose ingestion adapters.
+- Optional Kubernetes, CloudFormation, Pulumi, OpenTofu, Terraform plan, and
+  Terraform state ingestion adapters.
 - YAML overlay enrichment, provider normalization, duplicate detection, and
   topology merging.
 - NetworkX graph builder and analyzer for articulation points, bridges,
   connected components, centrality, cycles, and graph validation.
 - Risk analysis engine with structured risk reports, blast radius, dependency
   chains, and human-readable explanations.
-- Markdown, HTML, JSON, terminal, SARIF, OpenAPI, CSV, and Mermaid exports.
-- Graphviz DOT/SVG/PNG visualization and standalone interactive HTML graphs.
-- Topology diffing, risk history, plugin hooks, and Click CLI.
+- Markdown, JSON, terminal, CSV, and Mermaid exports.
+- Optional HTML, SARIF, OpenAPI, Graphviz, and interactive graph exports.
+- Topology diffing and Click CLI.
 - GitHub Actions CI for formatting, linting, type checking, tests, coverage,
   and package builds.
-- Release governance files, including issue templates, pull request template,
+- Project maintenance files, including issue templates, pull request template,
   code of conduct, security policy, and support policy.
 
 ### Security

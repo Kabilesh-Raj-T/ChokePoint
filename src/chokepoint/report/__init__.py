@@ -24,7 +24,11 @@ from chokepoint.report.history import (
     load_risk_history,
 )
 from chokepoint.report.risk import (
+    ConfidenceLevel,
     DependencyChain,
+    Evidence,
+    EvidenceKind,
+    FindingAssessment,
     RiskAnalyzer,
     RiskCategory,
     RiskFinding,
@@ -33,9 +37,13 @@ from chokepoint.report.risk import (
 )
 
 __all__ = [
+    "ConfidenceLevel",
     "DependencyChain",
     "DependencyGraphEdge",
     "DependencyTableRow",
+    "Evidence",
+    "EvidenceKind",
+    "FindingAssessment",
     "GeneratedReport",
     "ReportExporter",
     "RiskAnalyzer",

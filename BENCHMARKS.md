@@ -1,13 +1,17 @@
-# Benchmark Results
+# Performance Notes
 
-Benchmark date: 2026-07-19
+Check date: 2026-07-19
 
 Environment:
 
 - OS: Windows
 - Python: 3.12.13
 - Package manager: uv
-- Benchmark mode: release readiness smoke benchmarks
+- Mode: local smoke performance checks
+
+These numbers are included to show basic performance awareness. They are not a
+claim that every parser or report path has been tuned for large real-world
+systems.
 
 ## Algorithmic Complexity
 
@@ -22,7 +26,7 @@ Environment:
 | Betweenness centrality | `O(V * E)` |
 | Cycle detection | `O(V + E)` |
 
-## Smoke Benchmark Results
+## Smoke Results
 
 Synthetic topology shape:
 
@@ -37,7 +41,7 @@ Synthetic topology shape:
 | 500 services | 32.83 ms | 918.47 ms | 227.27 ms | 881.94 ms |
 | 1,000 services | 31.21 ms | 3,020.29 ms | 741.71 ms | 3,965.94 ms |
 
-## Release Verification
+## Project Checks
 
 | Command | Result |
 | --- | --- |

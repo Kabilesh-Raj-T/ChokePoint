@@ -13,6 +13,10 @@ from rich.table import Table
 from chokepoint.graph import AnalysisReport, GraphAnalyzer, GraphBuilder
 from chokepoint.models import Edge, Node, NodeType, Topology
 from chokepoint.report.risk import (
+    ConfidenceLevel,
+    Evidence,
+    EvidenceKind,
+    FindingAssessment,
     RiskAnalyzer,
     RiskCategory,
     RiskFinding,
@@ -22,9 +26,9 @@ from chokepoint.report.risk import (
 
 CRITICAL_SCORE_THRESHOLD = 80
 HIGH_SCORE_THRESHOLD = 60
-CRITICAL_TABLE_COLUMNS = 6
+CRITICAL_TABLE_COLUMNS = 8
 DEPENDENCY_TABLE_COLUMNS = 5
-SINGLE_POINT_TABLE_COLUMNS = 5
+SINGLE_POINT_TABLE_COLUMNS = 7
 HUMAN_JOIN_PAIR_COUNT = 2
 SEVERITY_SORT_RANK: dict[RiskLevel | None, int] = {
     RiskLevel.CRITICAL: 4,
@@ -32,6 +36,11 @@ SEVERITY_SORT_RANK: dict[RiskLevel | None, int] = {
     RiskLevel.MEDIUM: 2,
     RiskLevel.LOW: 1,
     None: 0,
+}
+CONFIDENCE_SORT_RANK: dict[ConfidenceLevel, int] = {
+    ConfidenceLevel.HIGH: 3,
+    ConfidenceLevel.MEDIUM: 2,
+    ConfidenceLevel.LOW: 1,
 }
 CATEGORY_LABELS: dict[RiskCategory, str] = {
     RiskCategory.DNS: "DNS",
@@ -83,10 +92,22 @@ class SinglePointOfFailure(BaseModel):
     provider: str
     node_type: NodeType
     severity: RiskLevel | None
+    confidence: ConfidenceLevel
+    assessment: FindingAssessment
     category: str
     blast_radius: int = Field(ge=0)
     impacted_nodes: tuple[str, ...]
+    evidence: tuple[Evidence, ...] = ()
     why_it_matters: str
+
+
+class _StructuralImpactContext(BaseModel):
+    """Filtered impact context for structural graph cut points."""
+
+    model_config = ConfigDict(frozen=True)
+
+    impacted_nodes: tuple[str, ...]
+    omitted_support_artifacts: int = Field(ge=0)
 
 
 class GeneratedReport(BaseModel):
@@ -294,6 +315,8 @@ class _HtmlRenderer:
             _html_row(
                 (
                     finding.risk_level.value,
+                    finding.confidence.value,
+                    finding.assessment.value,
                     finding.category.value,
                     finding.node_id,
                     str(finding.risk_score),
@@ -324,6 +347,8 @@ class _HtmlRenderer:
                 (
                     point.node_id,
                     point.severity.value if point.severity else "structural",
+                    point.confidence.value,
+                    point.assessment.value,
                     _point_category_text(point.category),
                     str(point.blast_radius),
                     point.why_it_matters,
@@ -370,8 +395,8 @@ class _HtmlRenderer:
   <table>
     <thead>
       <tr>
-        <th>Node</th><th>Severity</th><th>Category</th>
-        <th>Blast Radius</th><th>Why It Matters</th>
+        <th>Node</th><th>Severity</th><th>Confidence</th><th>Assessment</th>
+        <th>Category</th><th>Blast Radius</th><th>Why It Matters</th>
       </tr>
     </thead>
     <tbody>{single_points or _empty_html_row(SINGLE_POINT_TABLE_COLUMNS)}</tbody>
@@ -380,7 +405,8 @@ class _HtmlRenderer:
   <table>
     <thead>
       <tr>
-        <th>Level</th><th>Category</th><th>Node</th><th>Score</th>
+        <th>Level</th><th>Confidence</th><th>Assessment</th>
+        <th>Category</th><th>Node</th><th>Score</th>
         <th>Blast Radius</th><th>Explanation</th>
       </tr>
     </thead>
@@ -506,7 +532,7 @@ def _single_points_of_failure(
             continue
         node = topology.nodes[node_id]
         neighbors = topology.neighbors(node_id, direction="both")
-        impacted_nodes = tuple(sorted(neighbor.id for neighbor in neighbors))
+        impacted_context = _structural_impacted_context(neighbors)
         points.append(
             SinglePointOfFailure(
                 node_id=node.id,
@@ -514,13 +540,25 @@ def _single_points_of_failure(
                 provider=node.provider,
                 node_type=node.node_type,
                 severity=None,
+                confidence=ConfidenceLevel.MEDIUM,
+                assessment=FindingAssessment.NEEDS_REVIEW,
                 category="structural_articulation",
-                blast_radius=len(impacted_nodes),
-                impacted_nodes=impacted_nodes,
-                why_it_matters=(
-                    f"{node.name} is a structural cut point. If it fails or is "
-                    "removed, it can disconnect adjacent dependency paths: "
-                    f"{_impacted_text(impacted_nodes)}."
+                blast_radius=len(impacted_context.impacted_nodes),
+                impacted_nodes=impacted_context.impacted_nodes,
+                evidence=(
+                    Evidence(
+                        parser="chokepoint.graph",
+                        kind=EvidenceKind.GRAPH_ANALYSIS,
+                        subject=node.id,
+                        detail=(
+                            "NetworkX articulation-point analysis identified this "
+                            "node as a structural cut point."
+                        ),
+                    ),
+                ),
+                why_it_matters=_structural_articulation_explanation(
+                    node=node,
+                    context=impacted_context,
                 ),
             )
         )
@@ -530,6 +568,7 @@ def _single_points_of_failure(
             points,
             key=lambda point: (
                 -_severity_rank(point.severity),
+                -CONFIDENCE_SORT_RANK[point.confidence],
                 -point.blast_radius,
                 point.node_id,
             ),
@@ -545,6 +584,52 @@ def _risk_findings_by_node(
     for finding in findings:
         grouped.setdefault(finding.node_id, []).append(finding)
     return {node_id: tuple(grouped[node_id]) for node_id in sorted(grouped)}
+
+
+def _structural_impacted_context(
+    neighbors: tuple[Node, ...],
+) -> _StructuralImpactContext:
+    """Return structural neighbors excluding local Compose support artifacts."""
+    support_artifacts = tuple(
+        neighbor for neighbor in neighbors if _is_support_artifact(neighbor)
+    )
+    review_neighbors = tuple(
+        neighbor for neighbor in neighbors if not _is_support_artifact(neighbor)
+    )
+    impacted_nodes = tuple(sorted(neighbor.id for neighbor in review_neighbors))
+    if not impacted_nodes:
+        impacted_nodes = tuple(sorted(neighbor.id for neighbor in neighbors))
+        support_artifacts = ()
+    return _StructuralImpactContext(
+        impacted_nodes=impacted_nodes,
+        omitted_support_artifacts=len(support_artifacts),
+    )
+
+
+def _structural_articulation_explanation(
+    *,
+    node: Node,
+    context: _StructuralImpactContext,
+) -> str:
+    """Explain a structural cut point with support-artifact context."""
+    explanation = (
+        f"{node.name} is a structural cut point. If it fails or is removed, it can "
+        "disconnect adjacent dependency paths: "
+        f"{_impacted_text(context.impacted_nodes)}."
+    )
+    if context.omitted_support_artifacts:
+        explanation += (
+            f" {context.omitted_support_artifacts} local Compose support artifact(s) "
+            "were omitted from the blast radius."
+        )
+    return explanation
+
+
+def _is_support_artifact(node: Node) -> bool:
+    """Return whether a node is a local parser support artifact."""
+    return node.id.startswith(("compose:volume:", "compose:secret:")) or node.id == (
+        "compose:network:default"
+    )
 
 
 def _risk_single_point(
@@ -577,14 +662,16 @@ def _risk_single_point(
             }
         )
     )
-    category_text = _category_text(categories)
     provider_text = _provider_text(impacted_providers)
+    confidence = _combined_confidence(findings)
+    assessment = _combined_assessment(findings)
+    evidence = _combined_evidence(findings)
     why_it_matters = _risk_single_point_explanation(
         node=node,
         categories=categories,
         impacted_nodes=impacted_nodes,
-        category_text=category_text,
         provider_text=provider_text,
+        assessment=assessment,
     )
 
     return SinglePointOfFailure(
@@ -593,9 +680,12 @@ def _risk_single_point(
         provider=node.provider,
         node_type=node.node_type,
         severity=severity,
+        confidence=confidence,
+        assessment=assessment,
         category=", ".join(category.value for category in categories),
         blast_radius=len(impacted_nodes),
         impacted_nodes=impacted_nodes,
+        evidence=evidence,
         why_it_matters=why_it_matters,
     )
 
@@ -605,14 +695,23 @@ def _risk_single_point_explanation(
     node: Node,
     categories: tuple[RiskCategory, ...],
     impacted_nodes: tuple[str, ...],
-    category_text: str,
     provider_text: str,
+    assessment: FindingAssessment,
 ) -> str:
     """Explain why a risk finding creates a single point of failure."""
+    category_text = _category_text(categories)
     category_impacts = " ".join(
         dict.fromkeys(_category_impact(category) for category in categories)
     )
     impacted_text = _impacted_text(impacted_nodes)
+
+    if assessment == FindingAssessment.MODELING_ARTIFACT:
+        return (
+            f"{node.name} resembles a shared {category_text} dependency in the "
+            "modeled graph, but the available evidence points to a topology "
+            "modeling artifact. Review it with an owner before treating it as a "
+            f"production single point of failure. {category_impacts}"
+        )
 
     if categories == (RiskCategory.SINGLE_SERVICE_ARTICULATION,):
         path_text = (
@@ -630,6 +729,39 @@ def _risk_single_point_explanation(
         f"{node.name} is a shared {category_text} dependency{provider_text}. "
         f"If it fails, {impacted_text} may be affected. {category_impacts}"
     )
+
+
+def _combined_confidence(findings: tuple[RiskFinding, ...]) -> ConfidenceLevel:
+    """Return conservative confidence for grouped findings."""
+    return min(
+        findings, key=lambda finding: CONFIDENCE_SORT_RANK[finding.confidence]
+    ).confidence
+
+
+def _combined_assessment(findings: tuple[RiskFinding, ...]) -> FindingAssessment:
+    """Return the most review-sensitive assessment for grouped findings."""
+    assessments = {finding.assessment for finding in findings}
+    if FindingAssessment.MODELING_ARTIFACT in assessments:
+        return FindingAssessment.MODELING_ARTIFACT
+    if FindingAssessment.NEEDS_REVIEW in assessments:
+        return FindingAssessment.NEEDS_REVIEW
+    if FindingAssessment.LIKELY in assessments:
+        return FindingAssessment.LIKELY
+    return FindingAssessment.CONFIRMED
+
+
+def _combined_evidence(findings: tuple[RiskFinding, ...]) -> tuple[Evidence, ...]:
+    """Return deduplicated evidence across grouped findings."""
+    evidence: list[Evidence] = []
+    seen: set[str] = set()
+    for finding in findings:
+        for item in finding.evidence:
+            key = item.model_dump_json()
+            if key in seen:
+                continue
+            evidence.append(item)
+            seen.add(key)
+    return tuple(evidence)
 
 
 def _recommendations(
@@ -674,6 +806,8 @@ def _critical_dependencies_table(findings: Iterable[RiskFinding]) -> Table:
     table.add_column("Category")
     table.add_column("Node")
     table.add_column("Score", justify="right")
+    table.add_column("Confidence")
+    table.add_column("Assessment")
     table.add_column("Blast Radius", justify="right")
     table.add_column("Explanation")
     for finding in findings:
@@ -681,6 +815,8 @@ def _critical_dependencies_table(findings: Iterable[RiskFinding]) -> Table:
             finding.category.value,
             finding.node_id,
             str(finding.risk_score),
+            finding.confidence.value,
+            finding.assessment.value,
             str(finding.blast_radius),
             finding.explanation,
         )
@@ -721,16 +857,28 @@ def _single_points_table(points: tuple[SinglePointOfFailure, ...]) -> Table:
     table = Table(title="Hidden Single Points of Failure")
     table.add_column("Node")
     table.add_column("Severity")
+    table.add_column("Confidence")
+    table.add_column("Assessment")
     table.add_column("Category")
     table.add_column("Blast Radius", justify="right")
     table.add_column("Why It Matters")
     if not points:
-        table.add_row("None", "none", "none", "0", "No single points detected.")
+        table.add_row(
+            "None",
+            "none",
+            "none",
+            "none",
+            "none",
+            "0",
+            "No single points detected.",
+        )
         return table
     for point in points:
         table.add_row(
             point.node_id,
             point.severity.value if point.severity else "structural",
+            point.confidence.value,
+            point.assessment.value,
             _point_category_text(point.category),
             str(point.blast_radius),
             point.why_it_matters,
@@ -786,7 +934,10 @@ def _single_points_markdown(points: tuple[SinglePointOfFailure, ...]) -> list[st
         lines.append(
             f"- **{_escape_markdown(point.name)}** (`{point.node_id}`) - "
             f"{_point_summary(point)}, blast radius `{point.blast_radius}`. "
-            f"Why it matters: {_escape_markdown(point.why_it_matters)}"
+            f"Confidence: `{point.confidence.value}`. "
+            f"Assessment: `{point.assessment.value}`. "
+            f"Why it matters: {_escape_markdown(point.why_it_matters)} "
+            f"Evidence: {_escape_markdown(_evidence_summary(point.evidence))}"
         )
     return lines
 
@@ -796,13 +947,18 @@ def _critical_dependency_markdown(findings: tuple[RiskFinding, ...]) -> list[str
     if not findings:
         return ["No critical dependencies detected."]
     lines = [
-        "| Level | Category | Node | Score | Blast Radius | Explanation |",
-        "| --- | --- | --- | ---: | ---: | --- |",
+        (
+            "| Level | Confidence | Assessment | Category | Node | Score | "
+            "Blast Radius | Explanation |"
+        ),
+        "| --- | --- | --- | --- | --- | ---: | ---: | --- |",
     ]
     for finding in findings:
         lines.append(
             "| "
             f"{finding.risk_level.value} | "
+            f"{finding.confidence.value} | "
+            f"{finding.assessment.value} | "
             f"{finding.category.value} | "
             f"`{finding.node_id}` | "
             f"{finding.risk_score} | "
@@ -914,6 +1070,22 @@ def _point_summary(point: SinglePointOfFailure) -> str:
     if point.severity is None:
         return category
     return f"{point.severity.value} {category}"
+
+
+def _evidence_summary(evidence: tuple[Evidence, ...]) -> str:
+    """Return compact evidence text for human reports."""
+    if not evidence:
+        return "No evidence available."
+    snippets: list[str] = []
+    for item in evidence[:2]:
+        location = item.source or item.parser
+        if item.line is not None:
+            location = f"{location}:{item.line}"
+        snippets.append(f"{location} - {item.detail}")
+    omitted = len(evidence) - len(snippets)
+    if omitted > 0:
+        snippets.append(f"{omitted} more evidence item(s)")
+    return "; ".join(snippets)
 
 
 def _point_category_text(value: str) -> str:

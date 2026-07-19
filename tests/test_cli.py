@@ -76,6 +76,8 @@ def test_analyze_json_outputs_risk_report(tmp_path: Path) -> None:
     assert payload["critical_dependencies"][0]["node_id"] == "cloudflare"
     assert payload["dependency_graph"][0]["target"] == "cloudflare"
     assert payload["single_points_of_failure"][0]["node_id"] == "cloudflare"
+    assert payload["single_points_of_failure"][0]["confidence"]
+    assert payload["single_points_of_failure"][0]["assessment"]
     assert "why_it_matters" in payload["single_points_of_failure"][0]
 
 

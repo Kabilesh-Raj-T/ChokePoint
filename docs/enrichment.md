@@ -1,8 +1,8 @@
 # Enrichment
 
 Terraform cannot expose every infrastructure dependency. ChokePoint supports
-YAML overlays so operators can add external services, manual dependencies, and
-known platform relationships that are absent from Terraform state.
+YAML overlays so users can add external services, manual dependencies, and
+known relationships that are absent from Terraform state.
 
 ## API
 

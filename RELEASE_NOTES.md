@@ -1,37 +1,36 @@
-# ChokePoint 1.0.0 Release Notes
+# ChokePoint 1.0.0 Project Notes
 
 Release date: 2026-07-19
 
-ChokePoint 1.0.0 is the first production-ready release of the infrastructure
-dependency analyzer. It provides a typed, layered Python API and a CLI for
-ingesting infrastructure descriptions, constructing dependency graphs,
-identifying choke points, assessing risk, and exporting reports for engineering
-and security workflows.
+ChokePoint 1.0.0 is a portfolio milestone for the infrastructure dependency
+graph analyzer. It provides a typed Python API and CLI for ingesting
+infrastructure descriptions, constructing dependency graphs, identifying choke
+points, and exporting reports for engineering review.
 
 ## Highlights
 
-- Production-ready Python 3.12+ package using `uv`, `pyproject.toml`, and a
-  `src/` layout.
-- Unified topology model across YAML, Terraform, OpenTofu, Kubernetes,
-  CloudFormation, Docker Compose, Pulumi, Terraform plan, and Terraform state
-  inputs.
+- Python 3.12+ package using `uv`, `pyproject.toml`, and a `src/` layout.
+- Unified topology model centered on YAML-defined infrastructure dependencies.
+- Basic adapters for Terraform-style and Docker Compose inputs, plus optional
+  adapters for Kubernetes, CloudFormation, Pulumi, OpenTofu, Terraform plan, and
+  Terraform state data.
 - NetworkX-backed graph analysis for articulation points, bridges, components,
   centrality, cycles, and validation.
 - Risk engine for shared DNS, identity, CDN, secrets, monitoring, networking,
   CI/CD, email, and single-service articulation risks.
 - CLI commands for `analyze`, `graph`, `report`, `validate`, `export`, and
   `diff`.
-- Exports for Markdown, HTML, JSON, terminal, SARIF, OpenAPI, CSV, Mermaid,
-  Graphviz DOT/SVG/PNG, and interactive HTML.
+- Core exports for Markdown, JSON, terminal, CSV, and Mermaid, with optional
+  HTML, SARIF, OpenAPI, Graphviz, and interactive HTML outputs.
 
 ## Upgrade Notes
 
-This is the first stable release. Public APIs are expected to remain backward
-compatible within the 1.x series unless a security fix requires otherwise.
+This milestone is meant to be understandable and demoable. Public APIs may
+evolve as the project is simplified or refined.
 
 ## Verification
 
-The 1.0.0 release candidate passed:
+The project checks passed:
 
 ```text
 uv run black src tests

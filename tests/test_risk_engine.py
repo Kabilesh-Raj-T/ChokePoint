@@ -4,11 +4,20 @@ import json
 
 from chokepoint.graph import GraphBuilder
 from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.report import RiskAnalyzer, RiskCategory, RiskLevel, RiskReport
+from chokepoint.report import (
+    ConfidenceLevel,
+    FindingAssessment,
+    RiskAnalyzer,
+    RiskCategory,
+    RiskLevel,
+    RiskReport,
+)
 
 SHARED_BLAST_RADIUS = 2
 TRANSITIVE_BLAST_RADIUS = 3
 CRITICAL_SCORE_FLOOR = 90
+MODELING_ARTIFACT_SCORE_CAP = 20
+EVIDENCE_SOURCE_LINE = 7
 
 
 def node(
@@ -101,6 +110,9 @@ def test_critical_shared_dns_report_contains_blast_radius_and_explanation() -> N
     assert finding.blast_radius == SHARED_BLAST_RADIUS
     assert finding.impacted_nodes == ("aws-service", "azure-service")
     assert finding.impacted_providers == ("aws", "azure")
+    assert finding.confidence is ConfidenceLevel.HIGH
+    assert finding.assessment is FindingAssessment.CONFIRMED
+    assert finding.evidence
     assert "Cloudflare DNS" in finding.explanation
     assert "AWS and AZURE" in finding.explanation
 
@@ -155,6 +167,23 @@ def test_shared_cdn_is_critical() -> None:
 
     assert report.findings[0].category is RiskCategory.CDN
     assert report.findings[0].risk_level is RiskLevel.CRITICAL
+    assert report.findings[0].confidence is ConfidenceLevel.MEDIUM
+    assert report.findings[0].assessment is FindingAssessment.LIKELY
+
+
+def test_cdn_names_are_not_misclassified_as_ci_cd() -> None:
+    topology = topology_with_shared_dependency(
+        node(
+            "cdnjs-cdn",
+            provider="cdnjs",
+            node_type=NodeType.EXTERNAL,
+            name="cdnjs CDN",
+        )
+    )
+
+    report = RiskAnalyzer().analyze(topology)
+
+    assert {finding.category for finding in report.findings} == {RiskCategory.CDN}
 
 
 def test_shared_monitoring_and_networking_are_high_risk() -> None:
@@ -252,6 +281,8 @@ def test_low_single_service_articulation_is_reported() -> None:
 
     assert report.findings[0].category is RiskCategory.SINGLE_SERVICE_ARTICULATION
     assert report.findings[0].risk_level is RiskLevel.LOW
+    assert report.findings[0].confidence is ConfidenceLevel.MEDIUM
+    assert report.findings[0].assessment is FindingAssessment.NEEDS_REVIEW
     assert report.findings[0].blast_radius == 1
     assert report.findings[0].impacted_nodes == ("frontend",)
     assert report.findings[0].dependency_chain[0].path == ("frontend", "adapter")
@@ -307,6 +338,135 @@ def test_report_exports_structured_json() -> None:
     assert payload["finding_count"] >= 1
     assert payload["findings"][0]["risk_level"] == "critical"
     assert "dependency_chain" in payload["findings"][0]
+    assert "confidence" in payload["findings"][0]
+    assert "assessment" in payload["findings"][0]
+    assert "evidence" in payload["findings"][0]
+
+
+def test_docker_default_network_is_marked_as_modeling_artifact() -> None:
+    topology = Topology()
+    for service_id in ("api", "worker"):
+        topology.add_node(
+            node(service_id, provider="docker", node_type=NodeType.SERVICE)
+        )
+    topology.add_node(
+        Node(
+            id="compose:network:default",
+            name="default",
+            provider="docker",
+            node_type=NodeType.NETWORK,
+            metadata={"platform": "docker-compose"},
+        )
+    )
+    for source in ("api", "worker"):
+        topology.add_edge(
+            Edge(
+                source=source,
+                target="compose:network:default",
+                relationship=Relationship.DEPENDS_ON,
+                metadata={"source": "docker-compose"},
+            )
+        )
+
+    report = RiskAnalyzer().analyze(topology)
+    finding = finding_by_category(report, RiskCategory.NETWORKING)
+
+    assert finding.risk_level is RiskLevel.LOW
+    assert finding.risk_score <= MODELING_ARTIFACT_SCORE_CAP
+    assert finding.confidence is ConfidenceLevel.LOW
+    assert finding.assessment is FindingAssessment.MODELING_ARTIFACT
+    assert "modeling artifact" in finding.explanation
+
+
+def test_heuristic_classifications_are_likely_findings() -> None:
+    topology = Topology()
+    for service_id, provider in (("api", "aws"), ("worker", "azure")):
+        topology.add_node(
+            node(service_id, provider=provider, node_type=NodeType.SERVICE)
+        )
+    for dependency_id, name in (
+        ("shared-dns-router", "Shared DNS Router"),
+        ("okta-proxy", "Okta Proxy"),
+        ("vault-proxy", "Vault Proxy"),
+        ("shared-subnet", "Shared Subnet"),
+        ("sendgrid-mail", "SendGrid Mail"),
+    ):
+        topology.add_node(
+            node(
+                dependency_id,
+                provider="external",
+                node_type=NodeType.EXTERNAL,
+                name=name,
+            )
+        )
+        for source in ("api", "worker"):
+            topology.add_edge(
+                Edge(
+                    source=source,
+                    target=dependency_id,
+                    relationship=Relationship.DEPENDS_ON,
+                )
+            )
+
+    report = RiskAnalyzer().analyze(topology)
+    categories = {finding.category for finding in report.findings}
+
+    assert {
+        RiskCategory.DNS,
+        RiskCategory.IDENTITY,
+        RiskCategory.SECRETS_MANAGER,
+        RiskCategory.NETWORKING,
+        RiskCategory.EMAIL,
+    } <= categories
+    assert all(
+        finding.assessment is FindingAssessment.LIKELY
+        for finding in report.findings
+        if finding.category is not RiskCategory.SINGLE_SERVICE_ARTICULATION
+    )
+
+
+def test_evidence_includes_source_line_and_parser_metadata() -> None:
+    topology = topology_with_shared_dependency(
+        Node(
+            id="aws_route53_zone.main",
+            name="main",
+            provider="aws",
+            node_type=NodeType.DNS,
+            metadata={
+                "terraform_type": "aws_route53_zone",
+                "source": "main.tf",
+                "line": EVIDENCE_SOURCE_LINE,
+            },
+        )
+    )
+
+    finding = finding_by_category(RiskAnalyzer().analyze(topology), RiskCategory.DNS)
+    node_evidence = finding.evidence[0]
+
+    assert node_evidence.parser == "terraform"
+    assert node_evidence.source == "main.tf"
+    assert node_evidence.line == EVIDENCE_SOURCE_LINE
+
+
+def test_large_direct_dependency_evidence_is_summarized() -> None:
+    topology = Topology()
+    topology.add_node(node("dns", provider="aws", node_type=NodeType.DNS))
+    for index in range(6):
+        service_id = f"service-{index}"
+        topology.add_node(node(service_id, provider="aws", node_type=NodeType.SERVICE))
+        topology.add_edge(
+            Edge(
+                source=service_id,
+                target="dns",
+                relationship=Relationship.DEPENDS_ON,
+            )
+        )
+
+    finding = finding_by_category(RiskAnalyzer().analyze(topology), RiskCategory.DNS)
+
+    assert any(
+        "additional direct dependency" in item.detail for item in finding.evidence
+    )
 
 
 def test_no_findings_returns_zero_score() -> None:

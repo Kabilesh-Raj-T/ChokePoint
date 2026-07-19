@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import ClassVar
 
@@ -12,9 +13,50 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from chokepoint.graph import GraphAnalyzer, GraphBuilder
 from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
+from chokepoint.models.topology import Metadata
 
 MIN_SHARED_DEPENDENTS = 2
 HUMAN_JOIN_PAIR_COUNT = 2
+MAX_EDGE_EVIDENCE = 5
+
+
+class ConfidenceLevel(StrEnum):
+    """Confidence levels for risk findings."""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class EvidenceKind(StrEnum):
+    """Kinds of evidence attached to a risk finding."""
+
+    EXPLICIT_CONFIG = "explicit_config"
+    INFERRED = "inferred"
+    GRAPH_ANALYSIS = "graph_analysis"
+    HEURISTIC = "heuristic"
+
+
+class FindingAssessment(StrEnum):
+    """Human review status implied by a risk finding."""
+
+    CONFIRMED = "confirmed"
+    LIKELY = "likely"
+    MODELING_ARTIFACT = "modeling_artifact"
+    NEEDS_REVIEW = "needs_review"
+
+
+class Evidence(BaseModel):
+    """Evidence explaining why ChokePoint emitted a finding."""
+
+    model_config = ConfigDict(frozen=True)
+
+    parser: str
+    source: str | None = None
+    line: int | None = Field(default=None, ge=1)
+    kind: EvidenceKind
+    subject: str
+    detail: str
 
 
 class RiskLevel(StrEnum):
@@ -66,6 +108,9 @@ class RiskFinding(BaseModel):
     impacted_nodes: tuple[str, ...]
     impacted_providers: tuple[str, ...]
     dependency_chain: tuple[DependencyChain, ...]
+    confidence: ConfidenceLevel
+    assessment: FindingAssessment
+    evidence: tuple[Evidence, ...] = ()
     explanation: str
 
 
@@ -85,6 +130,17 @@ class RiskReport(BaseModel):
             JSON representation of this report.
         """
         return self.model_dump_json(indent=2)
+
+
+@dataclass(frozen=True)
+class _NodeClassification:
+    """Internal node-to-risk-category classification."""
+
+    category: RiskCategory
+    confidence: ConfidenceLevel
+    evidence_kind: EvidenceKind
+    evidence_detail: str
+    assessment: FindingAssessment | None = None
 
 
 class RiskAnalyzer:
@@ -144,10 +200,10 @@ class RiskAnalyzer:
         emitted_nodes: set[str] = set()
 
         shared_category_nodes = self._shared_category_nodes(topology, dependency_index)
-        for node_id, categories in shared_category_nodes.items():
+        for node_id, classifications in shared_category_nodes.items():
             node = topology.nodes[node_id]
-            for category in categories:
-                finding = self._shared_finding(node, category, dependency_index)
+            for classification in classifications:
+                finding = self._shared_finding(node, classification, dependency_index)
                 findings.append(finding)
                 emitted_nodes.add(node.id)
 
@@ -183,45 +239,56 @@ class RiskAnalyzer:
         self,
         topology: Topology,
         dependency_index: _DependencyIndex,
-    ) -> dict[str, tuple[RiskCategory, ...]]:
+    ) -> dict[str, tuple[_NodeClassification, ...]]:
         """Return nodes that match shared-risk categories."""
-        category_nodes: dict[RiskCategory, list[str]] = defaultdict(list)
+        classified_nodes: dict[str, list[_NodeClassification]] = defaultdict(list)
         for node in topology.nodes.values():
-            categories = _classify_node(node)
-            if not categories:
+            classifications = _classify_node(node)
+            if not classifications:
                 continue
             if len(dependency_index.impacted_nodes(node.id)) < MIN_SHARED_DEPENDENTS:
                 continue
-            for category in categories:
-                category_nodes[category].append(node.id)
+            for classification in classifications:
+                classified_nodes[node.id].append(classification)
 
         return {
             node_id: tuple(
-                category
-                for category, node_ids in category_nodes.items()
-                if node_id in node_ids
+                sorted(
+                    classifications,
+                    key=lambda item: (
+                        -_confidence_rank(item.confidence),
+                        item.category.value,
+                    ),
+                )
             )
-            for node_id in sorted(
-                {
-                    node_id
-                    for node_ids in category_nodes.values()
-                    for node_id in node_ids
-                }
-            )
+            for node_id, classifications in sorted(classified_nodes.items())
         }
 
     def _shared_finding(
         self,
         node: Node,
-        category: RiskCategory,
+        classification: _NodeClassification,
         dependency_index: _DependencyIndex,
     ) -> RiskFinding:
         """Build a finding for a shared dependency category."""
+        category = classification.category
         impacted_nodes = dependency_index.impacted_nodes(node.id)
         impacted_providers = dependency_index.impacted_providers(node.id)
         chains = dependency_index.dependency_chains(node.id)
-        risk_level = self.CATEGORY_LEVELS[category]
-        score = _risk_score(risk_level, len(impacted_nodes), len(impacted_providers))
+        assessment = _finding_assessment(classification)
+        risk_level = _effective_risk_level(self.CATEGORY_LEVELS[category], assessment)
+        score = _risk_score(
+            risk_level,
+            len(impacted_nodes),
+            len(impacted_providers),
+            assessment=assessment,
+        )
+        evidence = _shared_evidence(
+            node=node,
+            classification=classification,
+            dependency_index=dependency_index,
+            impacted_nodes=impacted_nodes,
+        )
 
         return RiskFinding(
             node_id=node.id,
@@ -235,11 +302,15 @@ class RiskAnalyzer:
             impacted_nodes=impacted_nodes,
             impacted_providers=impacted_providers,
             dependency_chain=chains,
+            confidence=classification.confidence,
+            assessment=assessment,
+            evidence=evidence,
             explanation=_shared_explanation(
                 node,
                 category,
                 impacted_nodes,
                 impacted_providers,
+                assessment=assessment,
             ),
         )
 
@@ -253,7 +324,12 @@ class RiskAnalyzer:
         impacted_providers = dependency_index.impacted_providers(node.id)
         chains = dependency_index.dependency_chains(node.id)
         risk_level = RiskLevel.LOW
-        score = _risk_score(risk_level, len(impacted_nodes), len(impacted_providers))
+        score = _risk_score(
+            risk_level,
+            len(impacted_nodes),
+            len(impacted_providers),
+            assessment=FindingAssessment.NEEDS_REVIEW,
+        )
         return RiskFinding(
             node_id=node.id,
             node_name=node.name,
@@ -266,6 +342,23 @@ class RiskAnalyzer:
             impacted_nodes=impacted_nodes,
             impacted_providers=impacted_providers,
             dependency_chain=chains,
+            confidence=ConfidenceLevel.MEDIUM,
+            assessment=FindingAssessment.NEEDS_REVIEW,
+            evidence=(
+                _node_model_evidence(
+                    node,
+                    detail=f"{node.name} is present in the analyzed topology.",
+                ),
+                Evidence(
+                    parser="chokepoint.graph",
+                    kind=EvidenceKind.GRAPH_ANALYSIS,
+                    subject=node.id,
+                    detail=(
+                        "NetworkX articulation-point analysis identified this "
+                        "node on a single service dependency path."
+                    ),
+                ),
+            ),
             explanation=(
                 f"{node.name} is an articulation point for a single service path."
             ),
@@ -279,16 +372,22 @@ class _DependencyIndex:
         self._topology = topology
         self._incoming: dict[str, list[str]] = defaultdict(list)
         self._outgoing: dict[str, list[str]] = defaultdict(list)
+        self._incoming_edges: dict[str, list[Edge]] = defaultdict(list)
         for edge in topology.edges:
             if edge.relationship != Relationship.DEPENDS_ON:
                 continue
             self._incoming[edge.target].append(edge.source)
             self._outgoing[edge.source].append(edge.target)
+            self._incoming_edges[edge.target].append(edge)
 
         for values in self._incoming.values():
             values.sort()
         for values in self._outgoing.values():
             values.sort()
+        for edge_values in self._incoming_edges.values():
+            edge_values.sort(
+                key=lambda edge: (edge.source, edge.target, edge.relationship)
+            )
 
     def impacted_nodes(self, node_id: str) -> tuple[str, ...]:
         """Return all nodes that directly or transitively depend on a node."""
@@ -329,6 +428,14 @@ class _DependencyIndex:
             if path:
                 chains.append(DependencyChain(source=source, target=target, path=path))
         return tuple(sorted(chains, key=lambda chain: (len(chain.path), chain.path)))
+
+    def direct_dependency_edges(self, target: str) -> tuple[Edge, ...]:
+        """Return direct `depends_on` edges pointing at a target."""
+        return tuple(self._incoming_edges[target])
+
+    def node(self, node_id: str) -> Node:
+        """Return a topology node by id."""
+        return self._topology.nodes[node_id]
 
     def _shortest_dependency_path(self, source: str, target: str) -> tuple[str, ...]:
         """Return the shortest source-to-target dependency path."""
@@ -371,9 +478,26 @@ def _topology_from_graph(graph: nx.Graph) -> Topology:
     return topology
 
 
-def _classify_node(node: Node) -> tuple[RiskCategory, ...]:
+def _classify_node(node: Node) -> tuple[_NodeClassification, ...]:
     """Classify a node into risk categories."""
-    text = " ".join(
+    text = _classification_text(node)
+    classifications: dict[RiskCategory, _NodeClassification] = {}
+    _classify_identity_surface(node, text, classifications)
+    _classify_external_services(node, text, classifications)
+    _classify_network_surface(node, text, classifications)
+    _classify_operations(text, classifications, node_id=node.id)
+
+    return tuple(
+        sorted(
+            classifications.values(),
+            key=lambda item: (-_confidence_rank(item.confidence), item.category.value),
+        )
+    )
+
+
+def _classification_text(node: Node) -> str:
+    """Return normalized node text used by heuristic classifiers."""
+    return " ".join(
         (
             node.id,
             node.name,
@@ -382,42 +506,211 @@ def _classify_node(node: Node) -> tuple[RiskCategory, ...]:
             str(node.metadata.get("category", "")),
         )
     ).lower()
-    categories: list[RiskCategory] = []
 
-    if node.node_type == NodeType.DNS or _contains_any(text, ("dns", "route53")):
-        categories.append(RiskCategory.DNS)
-    if node.node_type == NodeType.IDENTITY or _contains_any(
-        text, ("iam", "identity", "okta", "auth0", "entra")
-    ):
-        categories.append(RiskCategory.IDENTITY)
+
+def _classify_identity_surface(
+    node: Node,
+    text: str,
+    classifications: dict[RiskCategory, _NodeClassification],
+) -> None:
+    """Classify DNS, identity, and secrets categories."""
+    if node.node_type == NodeType.DNS:
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.DNS,
+                confidence=ConfidenceLevel.HIGH,
+                evidence_kind=EvidenceKind.EXPLICIT_CONFIG,
+                evidence_detail=f"{node.id} is explicitly typed as DNS.",
+            ),
+        )
+    elif _contains_any(text, ("dns", "route53")):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.DNS,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=f"{node.id} matches DNS naming/provider patterns.",
+            ),
+        )
+
+    if node.node_type == NodeType.IDENTITY:
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.IDENTITY,
+                confidence=ConfidenceLevel.HIGH,
+                evidence_kind=EvidenceKind.EXPLICIT_CONFIG,
+                evidence_detail=f"{node.id} is explicitly typed as identity.",
+            ),
+        )
+    elif _contains_any(text, ("iam", "identity", "okta", "auth0", "entra")):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.IDENTITY,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=(
+                    f"{node.id} matches identity naming/provider patterns."
+                ),
+            ),
+        )
+
+    if node.node_type == NodeType.SECRET:
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.SECRETS_MANAGER,
+                confidence=ConfidenceLevel.HIGH,
+                evidence_kind=EvidenceKind.EXPLICIT_CONFIG,
+                evidence_detail=f"{node.id} is explicitly typed as secret material.",
+            ),
+        )
+    elif _contains_any(text, ("secret", "secretsmanager", "keyvault", "vault")):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.SECRETS_MANAGER,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=f"{node.id} matches secrets-manager naming patterns.",
+            ),
+        )
+
+
+def _classify_external_services(
+    node: Node,
+    text: str,
+    classifications: dict[RiskCategory, _NodeClassification],
+) -> None:
+    """Classify CDN and monitoring categories."""
     if _contains_any(text, ("cdn", "cloudfront", "cloudflare", "fastly", "akamai")):
-        categories.append(RiskCategory.CDN)
-    if node.node_type == NodeType.SECRET or _contains_any(
-        text, ("secret", "secretsmanager", "keyvault", "vault")
-    ):
-        categories.append(RiskCategory.SECRETS_MANAGER)
-    if _contains_any(text, ("monitoring", "datadog", "prometheus", "grafana")):
-        categories.append(RiskCategory.MONITORING)
-    if node.node_type == NodeType.NETWORK or _contains_any(
-        text, ("vpc", "subnet", "network", "gateway", "security_group")
-    ):
-        categories.append(RiskCategory.NETWORKING)
-    if _contains_any(text, ("ci", "cd", "cicd", "github-actions", "jenkins")):
-        categories.append(RiskCategory.CI_CD)
-    if _contains_any(text, ("email", "ses", "sendgrid", "mailgun")):
-        categories.append(RiskCategory.EMAIL)
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.CDN,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=f"{node.id} matches CDN naming/provider patterns.",
+            ),
+        )
 
-    return tuple(dict.fromkeys(categories))
+    if _contains_any(text, ("monitoring", "datadog", "prometheus", "grafana")):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.MONITORING,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=(
+                    f"{node.id} matches monitoring naming/provider patterns."
+                ),
+            ),
+        )
+
+
+def _classify_network_surface(
+    node: Node,
+    text: str,
+    classifications: dict[RiskCategory, _NodeClassification],
+) -> None:
+    """Classify networking while downgrading known topology artifacts."""
+    if _is_docker_default_network(node):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.NETWORKING,
+                confidence=ConfidenceLevel.LOW,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=(
+                    f"{node.id} is Docker Compose's default network, which is often "
+                    "an automatic local topology artifact."
+                ),
+                assessment=FindingAssessment.MODELING_ARTIFACT,
+            ),
+        )
+    elif node.node_type == NodeType.NETWORK:
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.NETWORKING,
+                confidence=ConfidenceLevel.HIGH,
+                evidence_kind=EvidenceKind.EXPLICIT_CONFIG,
+                evidence_detail=f"{node.id} is explicitly typed as networking.",
+            ),
+        )
+    elif _contains_any(text, ("vpc", "subnet", "network", "gateway", "security_group")):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.NETWORKING,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=(
+                    f"{node.id} matches networking naming/provider patterns."
+                ),
+            ),
+        )
+
+
+def _classify_operations(
+    text: str,
+    classifications: dict[RiskCategory, _NodeClassification],
+    *,
+    node_id: str,
+) -> None:
+    """Classify operational dependency categories."""
+    if _contains_any(
+        text,
+        (
+            "ci/cd",
+            "ci-cd",
+            "cicd",
+            "github-actions",
+            "github actions",
+            "gitlab-ci",
+            "circleci",
+            "jenkins",
+            "buildkite",
+            "azure-pipelines",
+        ),
+    ):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.CI_CD,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=f"{node_id} matches CI/CD naming/provider patterns.",
+            ),
+        )
+
+    if _contains_any(text, ("email", "ses", "sendgrid", "mailgun")):
+        _add_classification(
+            classifications,
+            _classification(
+                RiskCategory.EMAIL,
+                confidence=ConfidenceLevel.MEDIUM,
+                evidence_kind=EvidenceKind.HEURISTIC,
+                evidence_detail=f"{node_id} matches email naming/provider patterns.",
+            ),
+        )
 
 
 def _risk_score(
     risk_level: RiskLevel,
     blast_radius: int,
     provider_count: int,
+    *,
+    assessment: FindingAssessment,
 ) -> int:
     """Calculate a bounded risk score."""
     base = RiskAnalyzer.BASE_SCORES[risk_level]
     score = base + min(blast_radius * 3, 9) + min(provider_count * 2, 6)
+    if assessment == FindingAssessment.MODELING_ARTIFACT:
+        return min(score, 20)
     return min(score, 100)
 
 
@@ -426,8 +719,17 @@ def _shared_explanation(
     category: RiskCategory,
     impacted_nodes: tuple[str, ...],
     impacted_providers: tuple[str, ...],
+    *,
+    assessment: FindingAssessment,
 ) -> str:
     """Generate human-readable explanation text for a shared finding."""
+    if assessment == FindingAssessment.MODELING_ARTIFACT:
+        return (
+            f"{node.name} looks like a shared {category.value.replace('_', ' ')} "
+            "dependency, but ChokePoint classified it as a modeling artifact. "
+            "Review the source topology before treating it as a production risk."
+        )
+
     label = category.value.replace("_", " ").upper()
     if impacted_providers:
         providers = _human_join(
@@ -438,6 +740,235 @@ def _shared_explanation(
             f"with a blast radius of {len(impacted_nodes)} node(s)."
         )
     return f"{node.name} {label} is shared by {len(impacted_nodes)} dependent node(s)."
+
+
+def _classification(
+    category: RiskCategory,
+    *,
+    confidence: ConfidenceLevel,
+    evidence_kind: EvidenceKind,
+    evidence_detail: str,
+    assessment: FindingAssessment | None = None,
+) -> _NodeClassification:
+    """Create a node classification."""
+    return _NodeClassification(
+        category=category,
+        confidence=confidence,
+        evidence_kind=evidence_kind,
+        evidence_detail=evidence_detail,
+        assessment=assessment,
+    )
+
+
+def _add_classification(
+    classifications: dict[RiskCategory, _NodeClassification],
+    candidate: _NodeClassification,
+) -> None:
+    """Add the highest-confidence classification for a category."""
+    existing = classifications.get(candidate.category)
+    if existing is None or _confidence_rank(candidate.confidence) > _confidence_rank(
+        existing.confidence
+    ):
+        classifications[candidate.category] = candidate
+
+
+def _finding_assessment(classification: _NodeClassification) -> FindingAssessment:
+    """Return the review assessment for a classification-backed finding."""
+    if classification.assessment is not None:
+        return classification.assessment
+    if classification.confidence == ConfidenceLevel.HIGH:
+        return FindingAssessment.CONFIRMED
+    if classification.confidence == ConfidenceLevel.MEDIUM:
+        return FindingAssessment.LIKELY
+    return FindingAssessment.NEEDS_REVIEW
+
+
+def _effective_risk_level(
+    category_level: RiskLevel,
+    assessment: FindingAssessment,
+) -> RiskLevel:
+    """Return the displayed risk level after trust calibration."""
+    if assessment == FindingAssessment.MODELING_ARTIFACT:
+        return RiskLevel.LOW
+    return category_level
+
+
+def _shared_evidence(
+    *,
+    node: Node,
+    classification: _NodeClassification,
+    dependency_index: _DependencyIndex,
+    impacted_nodes: tuple[str, ...],
+) -> tuple[Evidence, ...]:
+    """Build evidence entries for a shared dependency finding."""
+    direct_edges = dependency_index.direct_dependency_edges(node.id)
+    evidence: list[Evidence] = [
+        _node_model_evidence(
+            node,
+            kind=classification.evidence_kind,
+            detail=classification.evidence_detail,
+        )
+    ]
+
+    for edge in direct_edges[:MAX_EDGE_EVIDENCE]:
+        evidence.append(
+            _edge_model_evidence(
+                edge,
+                source_node=dependency_index.node(edge.source),
+                target_node=node,
+            )
+        )
+
+    omitted_count = len(direct_edges) - MAX_EDGE_EVIDENCE
+    if omitted_count > 0:
+        evidence.append(
+            Evidence(
+                parser="chokepoint.report",
+                kind=EvidenceKind.GRAPH_ANALYSIS,
+                subject=node.id,
+                detail=(
+                    f"{omitted_count} additional direct dependency edge(s) were "
+                    "summarized to keep the finding compact."
+                ),
+            )
+        )
+
+    evidence.append(
+        Evidence(
+            parser="chokepoint.graph",
+            kind=EvidenceKind.GRAPH_ANALYSIS,
+            subject=node.id,
+            detail=(
+                f"Dependency traversal found {len(impacted_nodes)} direct or "
+                "transitive node(s) depending on this node."
+            ),
+        )
+    )
+    return tuple(evidence)
+
+
+def _node_model_evidence(
+    node: Node,
+    *,
+    kind: EvidenceKind = EvidenceKind.EXPLICIT_CONFIG,
+    detail: str,
+) -> Evidence:
+    """Build evidence from a node model."""
+    return Evidence(
+        parser=_parser_from_metadata(node.metadata),
+        source=_source_from_metadata(node.metadata),
+        line=_line_from_metadata(node.metadata),
+        kind=kind,
+        subject=node.id,
+        detail=detail,
+    )
+
+
+def _edge_model_evidence(
+    edge: Edge,
+    *,
+    source_node: Node,
+    target_node: Node,
+) -> Evidence:
+    """Build evidence from an edge model."""
+    parser = _parser_from_metadata(edge.metadata)
+    source = (
+        _source_from_metadata(edge.metadata)
+        or _source_from_metadata(source_node.metadata)
+        or _source_from_metadata(target_node.metadata)
+    )
+    kind = (
+        EvidenceKind.INFERRED
+        if str(edge.metadata.get("source", "")).lower() == "inference"
+        else EvidenceKind.EXPLICIT_CONFIG
+    )
+    return Evidence(
+        parser=parser,
+        source=source,
+        line=_line_from_metadata(edge.metadata),
+        kind=kind,
+        subject=f"{edge.source}->{edge.target}",
+        detail=(
+            f"{edge.source} declares `{edge.relationship.value}` on {edge.target}."
+        ),
+    )
+
+
+def _parser_from_metadata(metadata: Metadata) -> str:
+    """Infer the parser that produced a node or edge."""
+    platform = metadata.get("platform")
+    if isinstance(platform, str) and platform:
+        return platform
+
+    source = metadata.get("source")
+    if isinstance(source, str) and source in {
+        "cloudformation",
+        "docker-compose",
+        "inference",
+        "kubernetes",
+        "pulumi",
+        "terraform",
+    }:
+        return source
+
+    if "terraform_type" in metadata:
+        return "terraform"
+    if "cloudformation_type" in metadata:
+        return "cloudformation"
+    if "pulumi_type" in metadata:
+        return "pulumi"
+    return "manual"
+
+
+def _source_from_metadata(metadata: Metadata) -> str | None:
+    """Return source file metadata when it is available."""
+    for key in ("source_file", "source_path", "source"):
+        value = metadata.get(key)
+        if isinstance(value, str) and value and not _looks_like_parser_label(value):
+            return value
+    return None
+
+
+def _line_from_metadata(metadata: Metadata) -> int | None:
+    """Return a one-based source line number when available."""
+    for key in ("line", "source_line"):
+        value = metadata.get(key)
+        if isinstance(value, int) and value > 0:
+            return value
+    return None
+
+
+def _looks_like_parser_label(value: str) -> bool:
+    """Return whether a string is a parser label rather than a source path."""
+    return value in {
+        "advanced",
+        "cloudformation",
+        "docker-compose",
+        "inference",
+        "kubernetes",
+        "manual",
+        "pulumi",
+        "terraform",
+    }
+
+
+def _is_docker_default_network(node: Node) -> bool:
+    """Return whether a node is Docker Compose's implicit default network."""
+    platform = node.metadata.get("platform")
+    return (
+        node.node_type == NodeType.NETWORK
+        and platform == "docker-compose"
+        and (node.name == "default" or node.id.endswith(":default"))
+    )
+
+
+def _confidence_rank(confidence: ConfidenceLevel) -> int:
+    """Return sort rank for confidence."""
+    return {
+        ConfidenceLevel.HIGH: 3,
+        ConfidenceLevel.MEDIUM: 2,
+        ConfidenceLevel.LOW: 1,
+    }[confidence]
 
 
 def _human_join(values: tuple[str, ...]) -> str:

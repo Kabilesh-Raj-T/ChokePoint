@@ -39,8 +39,13 @@ class ReportExporter:
                 "properties": {
                     "nodeId": finding.node_id,
                     "riskScore": finding.risk_score,
+                    "confidence": finding.confidence.value,
+                    "assessment": finding.assessment.value,
                     "blastRadius": finding.blast_radius,
                     "impactedNodes": list(finding.impacted_nodes),
+                    "evidence": [
+                        item.model_dump(mode="json") for item in finding.evidence
+                    ],
                 },
             }
             for finding in report.risk_report.findings
