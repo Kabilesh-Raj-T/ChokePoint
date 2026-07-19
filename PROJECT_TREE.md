@@ -1,4 +1,4 @@
-# Final Project Tree
+# Project Tree
 
 ```text
 .
@@ -26,13 +26,11 @@
 |-- SUPPORT.md
 |-- docs/
 |   |-- README.md
-|   |-- advanced-ingestion.md
-|   |-- enrichment.md
+|   |-- docker-compose-parser.md
 |   |-- exports.md
 |   |-- graph-engine.md
 |   |-- risk-engine.md
 |   |-- terraform-parser.md
-|   |-- visualization.md
 |   `-- yaml-parser.md
 |-- examples/
 |   |-- README.md
@@ -58,36 +56,24 @@
 |       |   `-- topology.py
 |       |-- parser/
 |       |   |-- __init__.py
-|       |   |-- advanced.py
-|       |   |-- enrichment.py
+|       |   |-- docker_compose_parser.py
 |       |   |-- terraform_parser.py
 |       |   `-- yaml_parser.py
 |       |-- py.typed
-|       |-- report/
-|       |   |-- __init__.py
-|       |   |-- export.py
-|       |   |-- generator.py
-|       |   |-- history.py
-|       |   `-- risk.py
-|       |-- utils/
-|       |   |-- __init__.py
-|       |   `-- plugins.py
-|       `-- visualization/
+|       `-- report/
 |           |-- __init__.py
-|           |-- graphviz.py
-|           `-- interactive.py
+|           |-- export.py
+|           |-- generator.py
+|           `-- risk.py
 |-- tests/
-|   |-- test_advanced_capabilities.py
-|   |-- test_advanced_parsers.py
 |   |-- test_cli.py
-|   |-- test_enrichment.py
+|   |-- test_docker_compose_parser.py
 |   |-- test_graph_engine.py
 |   |-- test_imports.py
 |   |-- test_report_generator.py
 |   |-- test_risk_engine.py
 |   |-- test_terraform_parser.py
 |   |-- test_topology_models.py
-|   |-- test_visualization_graphviz.py
 |   `-- test_yaml_parser.py
 `-- uv.lock
 ```

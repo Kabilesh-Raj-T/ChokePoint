@@ -13,8 +13,6 @@ def test_package_modules_are_importable() -> None:
         "chokepoint.graph",
         "chokepoint.models",
         "chokepoint.report",
-        "chokepoint.visualization",
-        "chokepoint.utils",
     )
 
     for module_name in module_names:

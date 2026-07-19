@@ -1,8 +1,8 @@
 # Architecture
 
 ChokePoint follows clean architecture principles. Domain concepts live at the
-center of the package, while input parsing, graph analysis, reporting,
-visualization, and command-line concerns remain isolated around that core.
+center of the package, while input parsing, graph analysis, reporting, and
+command-line concerns remain isolated around that core.
 
 ## Package Layout
 
@@ -13,8 +13,6 @@ src/chokepoint/
     graph/
     models/
     report/
-    visualization/
-    utils/
 ```
 
 ## Boundaries
@@ -23,17 +21,14 @@ src/chokepoint/
 - `parser` converts external infrastructure descriptions into domain models.
 - `graph` builds and analyzes dependency graphs from domain models.
 - `report` turns analysis results into user-facing report data.
-- `visualization` renders graph and report data for human inspection.
 - `cli` owns command-line input and delegates work to application services.
-- `utils` contains narrowly scoped support code that is independent of product
-  behavior.
 
 ## Dependency Direction
 
 Dependencies point inward toward stable domain concepts. Interface definitions
 belong near the code that consumes them, while concrete integrations are passed
-in from outer layers. This keeps parsing, reporting, visualization, and CLI
-adapters replaceable without reshaping the domain model.
+in from outer layers. This keeps parsing, reporting, and CLI adapters
+replaceable without reshaping the domain model.
 
 ## Dependency Injection
 
@@ -45,5 +40,5 @@ Pure domain operations should remain independent from infrastructure details.
 ## Testing Strategy
 
 Tests should start at the narrowest useful boundary. Domain behavior belongs in
-unit tests, while parser, report, visualization, and CLI workflows can use
-integration-style tests when module boundaries need to be exercised together.
+unit tests, while parser, report, and CLI workflows can use integration-style
+tests when module boundaries need to be exercised together.

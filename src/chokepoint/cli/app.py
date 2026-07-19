@@ -22,14 +22,7 @@ from chokepoint.report import (
     GeneratedReport,
     export_csv,
     export_mermaid,
-    export_openapi,
-    export_sarif,
     generate_security_report,
-)
-from chokepoint.visualization import (
-    GraphvizRenderError,
-    GraphvizVisualizer,
-    render_interactive_html,
 )
 
 LOGGER = logging.getLogger("chokepoint")
@@ -67,7 +60,6 @@ def cli(ctx: click.Context, *, verbose: bool) -> None:
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit structured JSON.")
 @click.option("--markdown", is_flag=True, help="Emit Markdown.")
-@click.option("--html", is_flag=True, help="Emit standalone HTML.")
 @click.pass_obj
 def analyze(
     ctx: CliContext,
@@ -75,11 +67,10 @@ def analyze(
     *,
     as_json: bool,
     markdown: bool,
-    html: bool,
 ) -> None:
     """Analyze topology.yaml and print a risk summary."""
     try:
-        quiet = as_json or html
+        quiet = as_json
         topology = _load_topology(topology_path, quiet=quiet)
         generated_report = _security_report(topology, quiet=quiet)
     except Exception as error:
@@ -89,7 +80,6 @@ def analyze(
         generated_report,
         as_json=as_json,
         markdown=markdown,
-        html=html,
     )
 
 
@@ -99,7 +89,6 @@ def analyze(
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit graph metrics as JSON.")
-@click.option("--svg", is_flag=True, help="Render SVG with Graphviz.")
 @click.option("--markdown", is_flag=True, help="Emit Markdown graph summary.")
 @click.pass_obj
 def graph(
@@ -107,17 +96,11 @@ def graph(
     topology_path: Path,
     *,
     as_json: bool,
-    svg: bool,
     markdown: bool,
 ) -> None:
     """Inspect or render the topology graph."""
     try:
-        topology = _load_topology(topology_path, quiet=as_json or svg)
-        if svg:
-            artifact = GraphvizVisualizer().render_svg(topology)
-            click.echo(artifact.text, nl=False)
-            return
-
+        topology = _load_topology(topology_path, quiet=as_json)
         graph_model = GraphBuilder().build(topology)
         analysis = GraphAnalyzer().analyze(graph_model)
     except Exception as error:
@@ -147,7 +130,6 @@ def graph(
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit structured JSON.")
 @click.option("--markdown", is_flag=True, help="Emit Markdown.")
-@click.option("--html", is_flag=True, help="Emit standalone HTML.")
 @click.pass_obj
 def report(
     ctx: CliContext,
@@ -155,11 +137,10 @@ def report(
     *,
     as_json: bool,
     markdown: bool,
-    html: bool,
 ) -> None:
     """Generate a risk report for topology.yaml."""
     try:
-        quiet = as_json or html
+        quiet = as_json
         topology = _load_topology(topology_path, quiet=quiet)
         generated_report = _security_report(topology, quiet=quiet)
     except Exception as error:
@@ -169,7 +150,6 @@ def report(
         generated_report,
         as_json=as_json,
         markdown=markdown,
-        html=html,
     )
 
 
@@ -181,7 +161,7 @@ def report(
 @click.option(
     "--format",
     "export_format",
-    type=click.Choice(["sarif", "openapi", "csv", "mermaid", "html"]),
+    type=click.Choice(["csv", "mermaid"]),
     required=True,
     help="Export format.",
 )
@@ -190,16 +170,10 @@ def export(ctx: CliContext, topology_path: Path, *, export_format: str) -> None:
     """Export topology or report artifacts."""
     try:
         topology = _load_topology(topology_path, quiet=True)
-        if export_format == "sarif":
-            click.echo(export_sarif(generate_security_report(topology)))
-        elif export_format == "openapi":
-            click.echo(export_openapi())
-        elif export_format == "csv":
+        if export_format == "csv":
             click.echo(export_csv(topology), nl=False)
-        elif export_format == "mermaid":
-            click.echo(export_mermaid(topology), nl=False)
         else:
-            click.echo(render_interactive_html(topology), nl=False)
+            click.echo(export_mermaid(topology), nl=False)
     except Exception as error:
         _fail(error, verbose=ctx.verbose)
 
@@ -313,13 +287,10 @@ def _emit_security_report(
     *,
     as_json: bool,
     markdown: bool,
-    html: bool,
 ) -> None:
     """Emit a security report in the requested format."""
     if as_json:
         click.echo(report.to_json())
-    elif html:
-        click.echo(report.to_html())
     elif markdown:
         click.echo(report.to_markdown())
     else:
@@ -372,6 +343,6 @@ def _fail(error: Exception, *, verbose: bool) -> NoReturn:
     """Render a helpful CLI error and exit."""
     if verbose:
         LOGGER.exception("Command failed")
-    if isinstance(error, TopologyParseError | GraphvizRenderError | ValueError):
+    if isinstance(error, TopologyParseError | ValueError):
         raise click.ClickException(str(error)) from error
     raise click.ClickException(f"unexpected error: {error}") from error

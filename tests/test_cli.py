@@ -5,6 +5,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+import chokepoint.cli.app as cli_app
 from chokepoint.cli import cli
 
 EXPECTED_GRAPH_NODES = 5
@@ -94,19 +95,6 @@ def test_report_markdown_outputs_heading(tmp_path: Path) -> None:
     assert "Cloudflare" in result.output or "cloudflare" in result.output
 
 
-def test_report_html_outputs_standalone_document(tmp_path: Path) -> None:
-    path = write_topology(tmp_path)
-
-    result = CliRunner().invoke(cli, ["report", str(path), "--html"])
-
-    assert result.exit_code == 0
-    assert result.output.startswith("<!doctype html>")
-    assert "<h2>Executive Summary</h2>" in result.output
-    assert "<h2>Dependency Graph</h2>" in result.output
-    assert "<h2>Hidden Single Points of Failure</h2>" in result.output
-    assert "<h2>Recommendations</h2>" in result.output
-
-
 def test_graph_json_outputs_graph_metrics(tmp_path: Path) -> None:
     path = write_topology(tmp_path)
 
@@ -128,17 +116,14 @@ def test_graph_markdown_outputs_summary(tmp_path: Path) -> None:
     assert "ChokePoint Graph Summary" in result.output
 
 
-def test_graph_svg_reports_missing_graphviz(
-    tmp_path: Path,
-    monkeypatch,
-) -> None:
+def test_graph_default_outputs_table(tmp_path: Path) -> None:
     path = write_topology(tmp_path)
-    monkeypatch.setenv("PATH", "")
 
-    result = CliRunner().invoke(cli, ["graph", str(path), "--svg"])
+    result = CliRunner().invoke(cli, ["graph", str(path)])
 
-    assert result.exit_code == 1
-    assert "Graphviz executable" in result.output
+    assert result.exit_code == 0
+    assert "Graph Summary" in result.output
+    assert "Articulation points" in result.output
 
 
 def test_export_csv_outputs_dependency_rows(tmp_path: Path) -> None:
@@ -151,30 +136,74 @@ def test_export_csv_outputs_dependency_rows(tmp_path: Path) -> None:
     assert "aws-api,cloudflare,depends_on" in result.output
 
 
-def test_export_sarif_outputs_security_report(tmp_path: Path) -> None:
+def test_export_mermaid_outputs_graph(tmp_path: Path) -> None:
     path = write_topology(tmp_path)
 
-    result = CliRunner().invoke(cli, ["export", str(path), "--format", "sarif"])
+    result = CliRunner().invoke(cli, ["export", str(path), "--format", "mermaid"])
 
-    payload = json.loads(result.output)
     assert result.exit_code == 0
-    assert payload["version"] == "2.1.0"
-    assert payload["runs"][0]["results"]
+    assert result.output.startswith("flowchart LR")
 
 
-def test_export_other_formats(tmp_path: Path) -> None:
+def test_analyze_reports_parse_error(tmp_path: Path) -> None:
+    path = write_topology(tmp_path, "services: frontend")
+
+    result = CliRunner().invoke(cli, ["analyze", str(path)])
+
+    assert result.exit_code == 1
+    assert "$.services must be a mapping" in result.output
+
+
+def test_graph_reports_parse_error(tmp_path: Path) -> None:
+    path = write_topology(tmp_path, "services: frontend")
+
+    result = CliRunner().invoke(cli, ["graph", str(path)])
+
+    assert result.exit_code == 1
+    assert "$.services must be a mapping" in result.output
+
+
+def test_report_reports_parse_error(tmp_path: Path) -> None:
+    path = write_topology(tmp_path, "services: frontend")
+
+    result = CliRunner().invoke(cli, ["report", str(path)])
+
+    assert result.exit_code == 1
+    assert "$.services must be a mapping" in result.output
+
+
+def test_export_reports_parse_error(tmp_path: Path) -> None:
+    path = write_topology(tmp_path, "services: frontend")
+
+    result = CliRunner().invoke(cli, ["export", str(path), "--format", "csv"])
+
+    assert result.exit_code == 1
+    assert "$.services must be a mapping" in result.output
+
+
+def test_diff_reports_parse_error(tmp_path: Path) -> None:
+    before = write_topology(tmp_path, "services: frontend")
+    after = tmp_path / "after.yaml"
+    after.write_text(TOPOLOGY_YAML, encoding="utf-8")
+
+    result = CliRunner().invoke(cli, ["diff", str(before), str(after)])
+
+    assert result.exit_code == 1
+    assert "$.services must be a mapping" in result.output
+
+
+def test_unexpected_cli_error_is_wrapped(tmp_path: Path, monkeypatch) -> None:
     path = write_topology(tmp_path)
 
-    openapi = CliRunner().invoke(cli, ["export", str(path), "--format", "openapi"])
-    mermaid = CliRunner().invoke(cli, ["export", str(path), "--format", "mermaid"])
-    html = CliRunner().invoke(cli, ["export", str(path), "--format", "html"])
+    def raise_runtime_error(_: Path):
+        raise RuntimeError("boom")
 
-    assert openapi.exit_code == 0
-    assert json.loads(openapi.output)["openapi"] == "3.1.0"
-    assert mermaid.exit_code == 0
-    assert mermaid.output.startswith("flowchart LR")
-    assert html.exit_code == 0
-    assert html.output.startswith("<!doctype html>")
+    monkeypatch.setattr(cli_app, "parse_topology_yaml_file", raise_runtime_error)
+
+    result = CliRunner().invoke(cli, ["validate", str(path)])
+
+    assert result.exit_code == 1
+    assert "unexpected error: boom" in result.output
 
 
 def test_diff_json_outputs_topology_changes(tmp_path: Path) -> None:
@@ -266,3 +295,17 @@ def test_help_lists_commands() -> None:
     assert "graph" in result.output
     assert "report" in result.output
     assert "validate" in result.output
+
+
+def test_main_delegates_to_click(monkeypatch) -> None:
+    called = False
+
+    def fake_cli() -> None:
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(cli_app, "cli", fake_cli)
+
+    cli_app.main()
+
+    assert called

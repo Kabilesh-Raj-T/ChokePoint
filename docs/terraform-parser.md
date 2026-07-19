@@ -19,9 +19,6 @@ Available entry points:
 - `parse_terraform_files(paths)`
 - `parse_terraform_directory(path)`
 - `TerraformParser(resource_mappings=...)`
-- `OpenTofuParser(...)` for OpenTofu-compatible HCL
-- `TerraformPlanParser().parse_text(...)` for plan JSON
-- `TerraformStateParser().parse_text(...)` for state JSON
 
 ## Resource Mapping
 

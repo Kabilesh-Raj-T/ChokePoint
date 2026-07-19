@@ -78,58 +78,6 @@ def test_report_markdown_is_github_security_report_friendly() -> None:
     )
 
 
-def test_report_html_is_standalone_and_escaped() -> None:
-    topology = Topology()
-    topology.add_node(
-        Node(
-            id="cloudflare",
-            name="Cloudflare <DNS>",
-            provider="cloudflare",
-            node_type=NodeType.DNS,
-        )
-    )
-    topology.add_node(
-        Node(
-            id="frontend",
-            name="Frontend",
-            provider="aws",
-            node_type=NodeType.SERVICE,
-        )
-    )
-    topology.add_node(
-        Node(
-            id="api",
-            name="API",
-            provider="azure",
-            node_type=NodeType.SERVICE,
-        )
-    )
-    topology.add_edge(
-        Edge(
-            source="frontend",
-            target="cloudflare",
-            relationship=Relationship.DEPENDS_ON,
-        )
-    )
-    topology.add_edge(
-        Edge(
-            source="api",
-            target="cloudflare",
-            relationship=Relationship.DEPENDS_ON,
-        )
-    )
-
-    html = generate_security_report(topology).to_html()
-
-    assert html.startswith("<!doctype html>")
-    assert "<h2>Executive Summary</h2>" in html
-    assert "<h2>Dependency Graph</h2>" in html
-    assert "<h2>Hidden Single Points of Failure</h2>" in html
-    assert "Cloudflare &lt;DNS&gt;" in html
-    assert "<table>" in html
-    assert "<h2>Blast Radius</h2>" in html
-
-
 def test_terminal_report_renders_expected_sections() -> None:
     report = generate_security_report(shared_dns_topology())
     stream = io.StringIO()
@@ -160,7 +108,11 @@ def test_report_empty_states_are_explicit() -> None:
 
     report = generate_security_report(topology)
     markdown = report.to_markdown()
-    html = report.to_html()
+    stream = io.StringIO()
+    console = Console(file=stream, width=120, force_terminal=False)
+
+    console.print(report.to_terminal())
+    terminal = stream.getvalue()
 
     assert report.risk_score == 0
     assert report.recommendations == (SECURITY_REPORT_RECOMMENDATION,)
@@ -168,7 +120,8 @@ def test_report_empty_states_are_explicit() -> None:
     assert "No critical dependencies detected." in markdown
     assert "No hidden single points of failure detected." in markdown
     assert "No dependencies declared." in markdown
-    assert "None detected." in html
+    assert "No dependencies declared" in terminal
+    assert "No single points detected" in terminal
 
 
 def test_structural_single_point_explains_articulation_without_risk_rule() -> None:

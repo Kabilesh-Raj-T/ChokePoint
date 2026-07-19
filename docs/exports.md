@@ -1,37 +1,25 @@
 # Exports
 
-ChokePoint exports topology and report data for automation, security review,
-and documentation workflows.
+ChokePoint exports topology and report data for local review and documentation.
 
 ## CLI
 
 ```bash
-chokepoint export topology.yaml --format sarif
-chokepoint export topology.yaml --format openapi
 chokepoint export topology.yaml --format csv
 chokepoint export topology.yaml --format mermaid
-chokepoint export topology.yaml --format html
 ```
 
 ## API
 
 ```python
-from chokepoint.report import (
-    export_csv,
-    export_mermaid,
-    export_openapi,
-    export_sarif,
-    generate_security_report,
-)
+from chokepoint.report import export_csv, export_mermaid
 
-report = generate_security_report(topology)
-sarif = export_sarif(report)
 csv_payload = export_csv(topology)
+mermaid_payload = export_mermaid(topology)
 ```
 
-Markdown and HTML reports include a dependency graph section plus a hidden
-single-points-of-failure section. The Markdown graph is emitted as Mermaid so
-GitHub can render it visually in issues, pull requests, and security reports.
+Markdown reports include a dependency graph section rendered as Mermaid, which
+GitHub can display in issues, pull requests, and project notes.
 
 ## Diff
 

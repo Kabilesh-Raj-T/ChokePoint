@@ -7,34 +7,26 @@ and this project uses semantic versioning.
 
 ## [1.0.0] - 2026-07-19
 
+Portfolio milestone focused on the core infrastructure graph model, CLI, and
+single-point-of-failure analysis.
+
 ### Added
 
 - Core `Topology`, `Node`, `Edge`, `NodeType`, and `Relationship` models.
 - YAML topology parsing with schema validation and helpful errors.
-- Terraform and OpenTofu HCL ingestion with provider/resource mapping.
-- Terraform plan JSON and state JSON ingestion.
-- Kubernetes, CloudFormation, Docker Compose, and Pulumi ingestion.
-- YAML overlay enrichment, provider normalization, duplicate detection, and
-  topology merging.
+- Basic Terraform HCL ingestion with provider/resource mapping.
+- Basic Docker Compose ingestion for services, support resources, and
+  `depends_on` relationships.
 - NetworkX graph builder and analyzer for articulation points, bridges,
   connected components, centrality, cycles, and graph validation.
 - Risk analysis engine with structured risk reports, blast radius, dependency
   chains, and human-readable explanations.
-- Markdown, HTML, JSON, terminal, SARIF, OpenAPI, CSV, and Mermaid exports.
-- Graphviz DOT/SVG/PNG visualization and standalone interactive HTML graphs.
-- Topology diffing, risk history, plugin hooks, and Click CLI.
+- Markdown, JSON, terminal, CSV, and Mermaid outputs.
+- Topology diffing and Click/Rich CLI.
 - GitHub Actions CI for formatting, linting, type checking, tests, coverage,
   and package builds.
-- Release governance files, including issue templates, pull request template,
+- Project maintenance files, including issue templates, pull request template,
   code of conduct, security policy, and support policy.
-
-### Security
-
-- Interactive HTML graph exports use script-safe JSON encoding and DOM text
-  rendering for topology values.
-- YAML parsing uses safe loaders or a constrained CloudFormation intrinsic-tag
-  loader.
-- Graphviz rendering invokes the executable without shell interpolation.
 
 ### Quality
 

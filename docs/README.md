@@ -6,9 +6,7 @@ in [Architecture.md](../Architecture.md).
 
 - [YAML parser](yaml-parser.md)
 - [Terraform parser](terraform-parser.md)
-- [Advanced ingestion](advanced-ingestion.md)
-- [Enrichment](enrichment.md)
+- [Docker Compose parser](docker-compose-parser.md)
 - [Graph engine](graph-engine.md)
 - [Risk engine](risk-engine.md)
-- [Visualization](visualization.md)
 - [Exports](exports.md)

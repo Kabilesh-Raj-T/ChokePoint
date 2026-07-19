@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import html
 from collections.abc import Iterable
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,9 +21,6 @@ from chokepoint.report.risk import (
 
 CRITICAL_SCORE_THRESHOLD = 80
 HIGH_SCORE_THRESHOLD = 60
-CRITICAL_TABLE_COLUMNS = 6
-DEPENDENCY_TABLE_COLUMNS = 5
-SINGLE_POINT_TABLE_COLUMNS = 5
 HUMAN_JOIN_PAIR_COUNT = 2
 SEVERITY_SORT_RANK: dict[RiskLevel | None, int] = {
     RiskLevel.CRITICAL: 4,
@@ -123,14 +119,6 @@ class GeneratedReport(BaseModel):
             Markdown report.
         """
         return _MarkdownRenderer(self).render()
-
-    def to_html(self) -> str:
-        """Render this report as standalone HTML.
-
-        Returns:
-            HTML report.
-        """
-        return _HtmlRenderer(self).render()
 
     def to_terminal(self) -> TerminalReport:
         """Render this report as a Rich terminal object.
@@ -280,133 +268,6 @@ class _MarkdownRenderer:
             "",
         ]
         return "\n".join(lines)
-
-
-class _HtmlRenderer:
-    """HTML renderer for generated reports."""
-
-    def __init__(self, report: GeneratedReport) -> None:
-        self._report = report
-
-    def render(self) -> str:
-        """Render standalone HTML."""
-        critical_rows = "".join(
-            _html_row(
-                (
-                    finding.risk_level.value,
-                    finding.category.value,
-                    finding.node_id,
-                    str(finding.risk_score),
-                    str(finding.blast_radius),
-                    finding.explanation,
-                )
-            )
-            for finding in self._report.critical_dependencies
-        )
-        dependency_rows = "".join(
-            _html_row(
-                (
-                    row.source,
-                    row.target,
-                    row.relationship,
-                    row.source_provider,
-                    row.target_provider,
-                )
-            )
-            for row in self._report.dependency_table
-        )
-        recommendations = "".join(
-            f"<li>{html.escape(recommendation)}</li>"
-            for recommendation in self._report.recommendations
-        )
-        single_points = "".join(
-            _html_row(
-                (
-                    point.node_id,
-                    point.severity.value if point.severity else "structural",
-                    _point_category_text(point.category),
-                    str(point.blast_radius),
-                    point.why_it_matters,
-                )
-            )
-            for point in self._report.single_points_of_failure
-        )
-        articulation_points = "".join(
-            f"<li>{html.escape(node_id)}</li>"
-            for node_id in self._report.articulation_points
-        )
-        bridges = "".join(
-            f"<li>{html.escape(source)} &rarr; {html.escape(target)}</li>"
-            for source, target in self._report.bridge_edges
-        )
-        blast_radius = "".join(
-            f"<li><code>{html.escape(node_id)}</code>: {radius}</li>"
-            for node_id, radius in sorted(self._report.blast_radius.items())
-        )
-        return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>{html.escape(self._report.title)}</title>
-  <style>
-    body {{ font-family: Inter, Arial, sans-serif; margin: 2rem; color: #111827; }}
-    h1, h2 {{ color: #111827; }}
-    .score {{ font-size: 2rem; font-weight: 700; color: #b91c1c; }}
-    table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
-    th, td {{ border: 1px solid #d1d5db; padding: 0.5rem; text-align: left; }}
-    th {{ background: #f3f4f6; }}
-    code {{ background: #f3f4f6; padding: 0.1rem 0.25rem; }}
-  </style>
-</head>
-<body>
-  <h1>{html.escape(self._report.title)}</h1>
-  <h2>Executive Summary</h2>
-  <p>{html.escape(self._report.executive_summary)}</p>
-  <h2>Risk Score</h2>
-  <p class="score">{self._report.risk_score}/100</p>
-  <h2>Dependency Graph</h2>
-  <pre><code>{html.escape(_mermaid_graph(self._report))}</code></pre>
-  <h2>Hidden Single Points of Failure</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Node</th><th>Severity</th><th>Category</th>
-        <th>Blast Radius</th><th>Why It Matters</th>
-      </tr>
-    </thead>
-    <tbody>{single_points or _empty_html_row(SINGLE_POINT_TABLE_COLUMNS)}</tbody>
-  </table>
-  <h2>Critical Dependencies</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Level</th><th>Category</th><th>Node</th><th>Score</th>
-        <th>Blast Radius</th><th>Explanation</th>
-      </tr>
-    </thead>
-    <tbody>{critical_rows or _empty_html_row(CRITICAL_TABLE_COLUMNS)}</tbody>
-  </table>
-  <h2>Articulation Points</h2>
-  <ul>{articulation_points or "<li>None detected.</li>"}</ul>
-  <h2>Bridge Edges</h2>
-  <ul>{bridges or "<li>None detected.</li>"}</ul>
-  <h2>Recommendations</h2>
-  <ul>{recommendations}</ul>
-  <h2>Dependency Table</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Source</th><th>Target</th><th>Relationship</th>
-        <th>Source Provider</th><th>Target Provider</th>
-      </tr>
-    </thead>
-    <tbody>{dependency_rows or _empty_html_row(DEPENDENCY_TABLE_COLUMNS)}</tbody>
-  </table>
-  <h2>Blast Radius</h2>
-  <ul>{blast_radius or "<li>No blast radius detected.</li>"}</ul>
-</body>
-</html>
-"""
 
 
 def generate_security_report(topology: Topology) -> GeneratedReport:
@@ -878,17 +739,6 @@ def _list_or_none(values: tuple[str, ...]) -> list[str]:
     if not values:
         return ["None detected."]
     return [f"- `{value}`" for value in values]
-
-
-def _html_row(values: tuple[str, ...]) -> str:
-    """Render one HTML table row."""
-    cells = "".join(f"<td>{html.escape(value)}</td>" for value in values)
-    return f"<tr>{cells}</tr>"
-
-
-def _empty_html_row(colspan: int) -> str:
-    """Render an empty table row."""
-    return f'<tr><td colspan="{colspan}">None detected.</td></tr>'
 
 
 def _escape_markdown(value: str) -> str:
