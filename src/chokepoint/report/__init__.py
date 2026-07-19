@@ -8,9 +8,11 @@ from chokepoint.report.export import (
     export_sarif,
 )
 from chokepoint.report.generator import (
+    DependencyGraphEdge,
     DependencyTableRow,
     GeneratedReport,
     SecurityReportGenerator,
+    SinglePointOfFailure,
     TerminalReport,
     generate_security_report,
 )
@@ -32,6 +34,7 @@ from chokepoint.report.risk import (
 
 __all__ = [
     "DependencyChain",
+    "DependencyGraphEdge",
     "DependencyTableRow",
     "GeneratedReport",
     "ReportExporter",
@@ -44,6 +47,7 @@ __all__ = [
     "RiskSnapshot",
     "RiskTrend",
     "SecurityReportGenerator",
+    "SinglePointOfFailure",
     "TerminalReport",
     "export_csv",
     "export_mermaid",

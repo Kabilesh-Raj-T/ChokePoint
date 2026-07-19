@@ -74,6 +74,9 @@ def test_analyze_json_outputs_risk_report(tmp_path: Path) -> None:
         "dns"
     }
     assert payload["critical_dependencies"][0]["node_id"] == "cloudflare"
+    assert payload["dependency_graph"][0]["target"] == "cloudflare"
+    assert payload["single_points_of_failure"][0]["node_id"] == "cloudflare"
+    assert "why_it_matters" in payload["single_points_of_failure"][0]
 
 
 def test_report_markdown_outputs_heading(tmp_path: Path) -> None:
@@ -84,6 +87,9 @@ def test_report_markdown_outputs_heading(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "ChokePoint Security Report" in result.output
     assert "## Executive Summary" in result.output
+    assert "## Dependency Graph" in result.output
+    assert "```mermaid" in result.output
+    assert "## Hidden Single Points of Failure" in result.output
     assert "## Critical Dependencies" in result.output
     assert "Cloudflare" in result.output or "cloudflare" in result.output
 
@@ -96,6 +102,8 @@ def test_report_html_outputs_standalone_document(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert result.output.startswith("<!doctype html>")
     assert "<h2>Executive Summary</h2>" in result.output
+    assert "<h2>Dependency Graph</h2>" in result.output
+    assert "<h2>Hidden Single Points of Failure</h2>" in result.output
     assert "<h2>Recommendations</h2>" in result.output
 
 
@@ -233,6 +241,8 @@ def test_analyze_rich_output_contains_table_data(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Risk Score" in result.output
     assert "Critical Dependencies" in result.output
+    assert "Dependency Graph" in result.output
+    assert "Hidden Single Points of Failure" in result.output
     assert "Dependency Table" in result.output
 
 

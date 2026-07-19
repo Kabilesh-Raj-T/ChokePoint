@@ -11,13 +11,42 @@ from rich.panel import Panel
 from rich.table import Table
 
 from chokepoint.graph import AnalysisReport, GraphAnalyzer, GraphBuilder
-from chokepoint.models import Edge, Node, Topology
-from chokepoint.report.risk import RiskAnalyzer, RiskFinding, RiskLevel, RiskReport
+from chokepoint.models import Edge, Node, NodeType, Topology
+from chokepoint.report.risk import (
+    RiskAnalyzer,
+    RiskCategory,
+    RiskFinding,
+    RiskLevel,
+    RiskReport,
+)
 
 CRITICAL_SCORE_THRESHOLD = 80
 HIGH_SCORE_THRESHOLD = 60
 CRITICAL_TABLE_COLUMNS = 6
 DEPENDENCY_TABLE_COLUMNS = 5
+SINGLE_POINT_TABLE_COLUMNS = 5
+HUMAN_JOIN_PAIR_COUNT = 2
+SEVERITY_SORT_RANK: dict[RiskLevel | None, int] = {
+    RiskLevel.CRITICAL: 4,
+    RiskLevel.HIGH: 3,
+    RiskLevel.MEDIUM: 2,
+    RiskLevel.LOW: 1,
+    None: 0,
+}
+CATEGORY_LABELS: dict[RiskCategory, str] = {
+    RiskCategory.DNS: "DNS",
+    RiskCategory.IDENTITY: "identity",
+    RiskCategory.CDN: "CDN",
+    RiskCategory.SECRETS_MANAGER: "secrets manager",
+    RiskCategory.MONITORING: "monitoring",
+    RiskCategory.NETWORKING: "networking",
+    RiskCategory.CI_CD: "CI/CD",
+    RiskCategory.EMAIL: "email",
+    RiskCategory.SINGLE_SERVICE_ARTICULATION: "single-service articulation",
+}
+CATEGORY_SORT_RANK: dict[RiskCategory, int] = {
+    category: index for index, category in enumerate(CATEGORY_LABELS)
+}
 
 
 class DependencyTableRow(BaseModel):
@@ -32,6 +61,34 @@ class DependencyTableRow(BaseModel):
     target_provider: str
 
 
+class DependencyGraphEdge(BaseModel):
+    """Human-readable dependency graph edge for reports."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str
+    source_name: str
+    target: str
+    target_name: str
+    relationship: str
+
+
+class SinglePointOfFailure(BaseModel):
+    """Dependency or graph structure that concentrates failure impact."""
+
+    model_config = ConfigDict(frozen=True)
+
+    node_id: str
+    name: str
+    provider: str
+    node_type: NodeType
+    severity: RiskLevel | None
+    category: str
+    blast_radius: int = Field(ge=0)
+    impacted_nodes: tuple[str, ...]
+    why_it_matters: str
+
+
 class GeneratedReport(BaseModel):
     """Structured security report generated from a topology."""
 
@@ -44,6 +101,8 @@ class GeneratedReport(BaseModel):
     articulation_points: tuple[str, ...]
     bridge_edges: tuple[tuple[str, str], ...]
     recommendations: tuple[str, ...]
+    dependency_graph: tuple[DependencyGraphEdge, ...]
+    single_points_of_failure: tuple[SinglePointOfFailure, ...]
     dependency_table: tuple[DependencyTableRow, ...]
     blast_radius: dict[str, int]
     risk_report: RiskReport
@@ -98,6 +157,7 @@ class SecurityReportGenerator:
         graph_report = GraphAnalyzer().analyze(graph)
         risk_report = RiskAnalyzer().analyze(topology)
         dependency_rows = _dependency_rows(topology)
+        dependency_graph = _dependency_graph_edges(topology)
         critical_dependencies = tuple(
             finding
             for finding in risk_report.findings
@@ -110,6 +170,11 @@ class SecurityReportGenerator:
         blast_radius = {
             finding.node_id: finding.blast_radius for finding in risk_report.findings
         }
+        single_points = _single_points_of_failure(
+            topology=topology,
+            risk_report=risk_report,
+            graph_report=graph_report,
+        )
 
         return GeneratedReport(
             executive_summary=_executive_summary(risk_report, graph_report),
@@ -118,6 +183,8 @@ class SecurityReportGenerator:
             articulation_points=graph_report.articulation_points,
             bridge_edges=graph_report.bridges,
             recommendations=recommendations,
+            dependency_graph=dependency_graph,
+            single_points_of_failure=single_points,
             dependency_table=dependency_rows,
             blast_radius=blast_radius,
             risk_report=risk_report,
@@ -154,6 +221,8 @@ class TerminalReport:
             self._report.articulation_points,
             self._report.bridge_edges,
         )
+        yield _dependency_graph_table(self._report.dependency_graph)
+        yield _single_points_table(self._report.single_points_of_failure)
         yield _recommendations_table(self._report.recommendations)
         yield _dependency_table(self._report.dependency_table)
 
@@ -176,6 +245,14 @@ class _MarkdownRenderer:
             "## Risk Score",
             "",
             f"**{self._report.risk_score}/100**",
+            "",
+            "## Dependency Graph",
+            "",
+            *_dependency_graph_markdown(self._report),
+            "",
+            "## Hidden Single Points of Failure",
+            "",
+            *_single_points_markdown(self._report.single_points_of_failure),
             "",
             "## Critical Dependencies",
             "",
@@ -242,6 +319,18 @@ class _HtmlRenderer:
             f"<li>{html.escape(recommendation)}</li>"
             for recommendation in self._report.recommendations
         )
+        single_points = "".join(
+            _html_row(
+                (
+                    point.node_id,
+                    point.severity.value if point.severity else "structural",
+                    _point_category_text(point.category),
+                    str(point.blast_radius),
+                    point.why_it_matters,
+                )
+            )
+            for point in self._report.single_points_of_failure
+        )
         articulation_points = "".join(
             f"<li>{html.escape(node_id)}</li>"
             for node_id in self._report.articulation_points
@@ -275,6 +364,18 @@ class _HtmlRenderer:
   <p>{html.escape(self._report.executive_summary)}</p>
   <h2>Risk Score</h2>
   <p class="score">{self._report.risk_score}/100</p>
+  <h2>Dependency Graph</h2>
+  <pre><code>{html.escape(_mermaid_graph(self._report))}</code></pre>
+  <h2>Hidden Single Points of Failure</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Node</th><th>Severity</th><th>Category</th>
+        <th>Blast Radius</th><th>Why It Matters</th>
+      </tr>
+    </thead>
+    <tbody>{single_points or _empty_html_row(SINGLE_POINT_TABLE_COLUMNS)}</tbody>
+  </table>
   <h2>Critical Dependencies</h2>
   <table>
     <thead>
@@ -353,6 +454,27 @@ def _dependency_rows(topology: Topology) -> tuple[DependencyTableRow, ...]:
     return tuple(rows)
 
 
+def _dependency_graph_edges(topology: Topology) -> tuple[DependencyGraphEdge, ...]:
+    """Build human-readable dependency graph edges."""
+    edges: list[DependencyGraphEdge] = []
+    for edge in sorted(
+        topology.edges,
+        key=lambda item: (item.source, item.target, item.relationship.value),
+    ):
+        source = topology.nodes[edge.source]
+        target = topology.nodes[edge.target]
+        edges.append(
+            DependencyGraphEdge(
+                source=edge.source,
+                source_name=source.name,
+                target=edge.target,
+                target_name=target.name,
+                relationship=edge.relationship.value,
+            )
+        )
+    return tuple(edges)
+
+
 def _dependency_row(edge: Edge, source: Node, target: Node) -> DependencyTableRow:
     """Build one dependency table row."""
     return DependencyTableRow(
@@ -361,6 +483,152 @@ def _dependency_row(edge: Edge, source: Node, target: Node) -> DependencyTableRo
         relationship=edge.relationship.value,
         source_provider=source.provider,
         target_provider=target.provider,
+    )
+
+
+def _single_points_of_failure(
+    *,
+    topology: Topology,
+    risk_report: RiskReport,
+    graph_report: AnalysisReport,
+) -> tuple[SinglePointOfFailure, ...]:
+    """Build single-point-of-failure explanations."""
+    points: list[SinglePointOfFailure] = []
+    seen: set[str] = set()
+
+    for node_id, findings in _risk_findings_by_node(risk_report.findings).items():
+        node = topology.nodes[node_id]
+        points.append(_risk_single_point(node, findings))
+        seen.add(node.id)
+
+    for node_id in graph_report.articulation_points:
+        if node_id in seen:
+            continue
+        node = topology.nodes[node_id]
+        neighbors = topology.neighbors(node_id, direction="both")
+        impacted_nodes = tuple(sorted(neighbor.id for neighbor in neighbors))
+        points.append(
+            SinglePointOfFailure(
+                node_id=node.id,
+                name=node.name,
+                provider=node.provider,
+                node_type=node.node_type,
+                severity=None,
+                category="structural_articulation",
+                blast_radius=len(impacted_nodes),
+                impacted_nodes=impacted_nodes,
+                why_it_matters=(
+                    f"{node.name} is a structural cut point. If it fails or is "
+                    "removed, it can disconnect adjacent dependency paths: "
+                    f"{_impacted_text(impacted_nodes)}."
+                ),
+            )
+        )
+
+    return tuple(
+        sorted(
+            points,
+            key=lambda point: (
+                -_severity_rank(point.severity),
+                -point.blast_radius,
+                point.node_id,
+            ),
+        )
+    )
+
+
+def _risk_findings_by_node(
+    findings: tuple[RiskFinding, ...],
+) -> dict[str, tuple[RiskFinding, ...]]:
+    """Group risk findings by node id in deterministic order."""
+    grouped: dict[str, list[RiskFinding]] = {}
+    for finding in findings:
+        grouped.setdefault(finding.node_id, []).append(finding)
+    return {node_id: tuple(grouped[node_id]) for node_id in sorted(grouped)}
+
+
+def _risk_single_point(
+    node: Node,
+    findings: tuple[RiskFinding, ...],
+) -> SinglePointOfFailure:
+    """Build a single-point explanation from a risk finding."""
+    severity = max((finding.risk_level for finding in findings), key=_severity_rank)
+    categories = tuple(
+        sorted(
+            {finding.category for finding in findings},
+            key=lambda item: CATEGORY_SORT_RANK[item],
+        )
+    )
+    impacted_nodes = tuple(
+        sorted(
+            {
+                impacted_node
+                for finding in findings
+                for impacted_node in finding.impacted_nodes
+            }
+        )
+    )
+    impacted_providers = tuple(
+        sorted(
+            {
+                provider
+                for finding in findings
+                for provider in finding.impacted_providers
+            }
+        )
+    )
+    category_text = _category_text(categories)
+    provider_text = _provider_text(impacted_providers)
+    why_it_matters = _risk_single_point_explanation(
+        node=node,
+        categories=categories,
+        impacted_nodes=impacted_nodes,
+        category_text=category_text,
+        provider_text=provider_text,
+    )
+
+    return SinglePointOfFailure(
+        node_id=node.id,
+        name=node.name,
+        provider=node.provider,
+        node_type=node.node_type,
+        severity=severity,
+        category=", ".join(category.value for category in categories),
+        blast_radius=len(impacted_nodes),
+        impacted_nodes=impacted_nodes,
+        why_it_matters=why_it_matters,
+    )
+
+
+def _risk_single_point_explanation(
+    *,
+    node: Node,
+    categories: tuple[RiskCategory, ...],
+    impacted_nodes: tuple[str, ...],
+    category_text: str,
+    provider_text: str,
+) -> str:
+    """Explain why a risk finding creates a single point of failure."""
+    category_impacts = " ".join(
+        dict.fromkeys(_category_impact(category) for category in categories)
+    )
+    impacted_text = _impacted_text(impacted_nodes)
+
+    if categories == (RiskCategory.SINGLE_SERVICE_ARTICULATION,):
+        path_text = (
+            "that dependency path"
+            if len(impacted_nodes) == 1
+            else "those dependency paths"
+        )
+        return (
+            f"{node.name} is an articulation point on the dependency path for "
+            f"{impacted_text}. If it fails, {path_text} can be disconnected. "
+            f"{category_impacts}"
+        )
+
+    return (
+        f"{node.name} is a shared {category_text} dependency{provider_text}. "
+        f"If it fails, {impacted_text} may be affected. {category_impacts}"
     )
 
 
@@ -434,6 +702,42 @@ def _graph_findings_table(
     return table
 
 
+def _dependency_graph_table(edges: tuple[DependencyGraphEdge, ...]) -> Table:
+    """Build terminal dependency graph table."""
+    table = Table(title="Dependency Graph")
+    table.add_column("Source")
+    table.add_column("Depends On")
+    table.add_column("Relationship")
+    if not edges:
+        table.add_row("None", "None", "No dependencies declared")
+        return table
+    for edge in edges:
+        table.add_row(edge.source, edge.target, edge.relationship)
+    return table
+
+
+def _single_points_table(points: tuple[SinglePointOfFailure, ...]) -> Table:
+    """Build terminal single-points-of-failure table."""
+    table = Table(title="Hidden Single Points of Failure")
+    table.add_column("Node")
+    table.add_column("Severity")
+    table.add_column("Category")
+    table.add_column("Blast Radius", justify="right")
+    table.add_column("Why It Matters")
+    if not points:
+        table.add_row("None", "none", "none", "0", "No single points detected.")
+        return table
+    for point in points:
+        table.add_row(
+            point.node_id,
+            point.severity.value if point.severity else "structural",
+            _point_category_text(point.category),
+            str(point.blast_radius),
+            point.why_it_matters,
+        )
+    return table
+
+
 def _recommendations_table(recommendations: tuple[str, ...]) -> Table:
     """Build terminal recommendations table."""
     table = Table(title="Recommendations")
@@ -460,6 +764,31 @@ def _dependency_table(rows: tuple[DependencyTableRow, ...]) -> Table:
             row.target_provider,
         )
     return table
+
+
+def _dependency_graph_markdown(report: GeneratedReport) -> list[str]:
+    """Render dependency graph as Markdown with Mermaid."""
+    return [
+        "Arrows mean `source depends on target`.",
+        "",
+        "```mermaid",
+        *_mermaid_graph(report).splitlines(),
+        "```",
+    ]
+
+
+def _single_points_markdown(points: tuple[SinglePointOfFailure, ...]) -> list[str]:
+    """Render single points of failure as explanatory Markdown."""
+    if not points:
+        return ["No hidden single points of failure detected."]
+    lines: list[str] = []
+    for point in points:
+        lines.append(
+            f"- **{_escape_markdown(point.name)}** (`{point.node_id}`) - "
+            f"{_point_summary(point)}, blast radius `{point.blast_radius}`. "
+            f"Why it matters: {_escape_markdown(point.why_it_matters)}"
+        )
+    return lines
 
 
 def _critical_dependency_markdown(findings: tuple[RiskFinding, ...]) -> list[str]:
@@ -516,6 +845,34 @@ def _blast_radius_markdown(blast_radius: dict[str, int]) -> list[str]:
     ]
 
 
+def _mermaid_graph(report: GeneratedReport) -> str:
+    """Render a Mermaid dependency graph with SPOF labels."""
+    if not report.dependency_graph:
+        return 'flowchart LR\n  empty["No dependencies declared"]'
+
+    single_points = {point.node_id: point for point in report.single_points_of_failure}
+    nodes: dict[str, str] = {}
+    for edge in report.dependency_graph:
+        nodes[edge.source] = edge.source_name
+        nodes[edge.target] = edge.target_name
+
+    lines = ["flowchart LR"]
+    for node_id, name in sorted(nodes.items()):
+        point = single_points.get(node_id)
+        label = name
+        if point is not None:
+            label = f"{name}\\nSPOF: {_point_summary(point)}"
+        lines.append(f'  {_mermaid_id(node_id)}["{_escape_mermaid_label(label)}"]')
+
+    for edge in report.dependency_graph:
+        lines.append(
+            "  "
+            f"{_mermaid_id(edge.source)} -->|{edge.relationship}| "
+            f"{_mermaid_id(edge.target)}"
+        )
+    return "\n".join(lines)
+
+
 def _list_or_none(values: tuple[str, ...]) -> list[str]:
     """Render a Markdown list or empty state."""
     if not values:
@@ -537,6 +894,114 @@ def _empty_html_row(colspan: int) -> str:
 def _escape_markdown(value: str) -> str:
     """Escape markdown table separators."""
     return value.replace("|", "\\|")
+
+
+def _mermaid_id(value: str) -> str:
+    """Return a stable Mermaid node id."""
+    return "n_" + "".join(
+        character if character.isalnum() else "_" for character in value
+    )
+
+
+def _escape_mermaid_label(value: str) -> str:
+    """Escape Mermaid label text."""
+    return value.replace('"', '\\"')
+
+
+def _point_summary(point: SinglePointOfFailure) -> str:
+    """Return a compact human label for a single point."""
+    category = _point_category_text(point.category)
+    if point.severity is None:
+        return category
+    return f"{point.severity.value} {category}"
+
+
+def _point_category_text(value: str) -> str:
+    """Return a human-readable label for a point category string."""
+    labels: list[str] = []
+    for raw_category in (part.strip() for part in value.split(",")):
+        try:
+            category = RiskCategory(raw_category)
+        except ValueError:
+            labels.append(raw_category.replace("_", " "))
+        else:
+            labels.append(CATEGORY_LABELS[category])
+    return ", ".join(labels)
+
+
+def _impacted_text(values: tuple[str, ...]) -> str:
+    """Return impacted node wording for explanations."""
+    return _human_text_list(values) or "no directly identified nodes"
+
+
+def _human_text_list(values: tuple[str, ...]) -> str:
+    """Join plain text values for human-readable explanations."""
+    if not values:
+        return ""
+    if len(values) == 1:
+        return values[0]
+    if len(values) == HUMAN_JOIN_PAIR_COUNT:
+        return f"{values[0]} and {values[1]}"
+    return f"{', '.join(values[:-1])}, and {values[-1]}"
+
+
+def _category_text(categories: tuple[RiskCategory, ...]) -> str:
+    """Return a human-readable category list."""
+    return _human_text_list(tuple(CATEGORY_LABELS[category] for category in categories))
+
+
+def _provider_text(providers: tuple[str, ...]) -> str:
+    """Return provider context for an explanation."""
+    if not providers:
+        return ""
+    return (
+        f" across {_human_text_list(tuple(provider.upper() for provider in providers))}"
+    )
+
+
+def _category_impact(category: RiskCategory) -> str:
+    """Explain why a risk category matters operationally."""
+    impacts = {
+        RiskCategory.DNS: (
+            "DNS failures can make healthy services unreachable to users and "
+            "other systems."
+        ),
+        RiskCategory.IDENTITY: (
+            "Identity failures can block authentication, authorization, and "
+            "service-to-service access."
+        ),
+        RiskCategory.CDN: (
+            "CDN failures can make edge delivery unavailable even when origins "
+            "are healthy."
+        ),
+        RiskCategory.SECRETS_MANAGER: (
+            "Secrets failures can prevent applications from starting, rotating "
+            "credentials, or connecting to dependencies."
+        ),
+        RiskCategory.MONITORING: (
+            "Monitoring failures can hide incidents and delay recovery."
+        ),
+        RiskCategory.NETWORKING: (
+            "Networking failures can disconnect otherwise healthy services."
+        ),
+        RiskCategory.CI_CD: (
+            "CI/CD failures can block deploys, rollbacks, and urgent fixes."
+        ),
+        RiskCategory.EMAIL: (
+            "Email dependency failures can break notifications, verification, "
+            "and customer communication."
+        ),
+        RiskCategory.SINGLE_SERVICE_ARTICULATION: (
+            "A structural articulation point can disconnect an end-to-end "
+            "dependency path."
+        ),
+    }
+    return impacts[category]
+
+
+def _severity_rank(severity: RiskLevel | None) -> int:
+    """Return sort rank for severity."""
+    return SEVERITY_SORT_RANK[severity]
 
 
 def _score_style(score: int) -> str:

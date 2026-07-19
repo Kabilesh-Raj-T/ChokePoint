@@ -53,6 +53,11 @@ chokepoint export topology.yaml --format mermaid
 chokepoint diff before.yaml after.yaml --json
 ```
 
+`analyze` and `report` explain the topology in terms of a visual dependency
+graph, hidden single points of failure, blast radius, and why each risky
+dependency matters. Markdown output includes a Mermaid graph that renders
+directly in GitHub security reports.
+
 Use `--verbose` before the command for colored diagnostic logs:
 
 ```bash

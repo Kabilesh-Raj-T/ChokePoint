@@ -43,3 +43,11 @@ Each finding includes:
 
 The report-level `risk_score` is the highest finding score. Scores are bounded
 from `0` to `100` and combine severity, blast radius, and provider diversity.
+
+Generated reports also include:
+
+- `dependency_graph`: normalized edges used to render the topology as a
+  Mermaid dependency graph.
+- `single_points_of_failure`: one explanatory record per risky shared
+  dependency or structural articulation point, including severity, category,
+  blast radius, impacted nodes, and `why_it_matters` text for human review.

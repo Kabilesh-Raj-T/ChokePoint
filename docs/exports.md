@@ -29,6 +29,10 @@ sarif = export_sarif(report)
 csv_payload = export_csv(topology)
 ```
 
+Markdown and HTML reports include a dependency graph section plus a hidden
+single-points-of-failure section. The Markdown graph is emitted as Mermaid so
+GitHub can render it visually in issues, pull requests, and security reports.
+
 ## Diff
 
 Topology diffs are available through the graph API and CLI:
