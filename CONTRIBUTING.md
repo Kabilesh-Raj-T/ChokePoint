@@ -15,11 +15,16 @@ uv run pre-commit install
 Run these checks before opening a pull request:
 
 ```bash
+uv sync --extra dev
 uv run black --check src tests
 uv run ruff check src tests
 uv run mypy
 uv run pytest
 ```
+
+If test collection fails with missing imports, verify that the command is being
+run through uv from the repository root. Running a globally installed `pytest`
+without first installing the project dependencies is not a supported check.
 
 ## Code Style
 

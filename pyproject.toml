@@ -39,11 +39,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/chokepoint/chokepoint"
-Documentation = "https://github.com/chokepoint/chokepoint/tree/main/docs"
-Repository = "https://github.com/chokepoint/chokepoint"
-Issues = "https://github.com/chokepoint/chokepoint/issues"
-Changelog = "https://github.com/chokepoint/chokepoint/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Kabilesh-Raj-T/ChokePoint"
+Documentation = "https://github.com/Kabilesh-Raj-T/ChokePoint/tree/main/docs"
+Repository = "https://github.com/Kabilesh-Raj-T/ChokePoint"
+Issues = "https://github.com/Kabilesh-Raj-T/ChokePoint/issues"
+Changelog = "https://github.com/Kabilesh-Raj-T/ChokePoint/blob/main/CHANGELOG.md"
 
 [project.scripts]
 chokepoint = "chokepoint.cli:main"
@@ -113,4 +113,5 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-ra --strict-config --strict-markers --cov=chokepoint --cov-report=term-missing --cov-fail-under=95"
+pythonpath = ["src"]
 testpaths = ["tests"]

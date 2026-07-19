@@ -53,7 +53,7 @@ class ReportExporter:
                     "tool": {
                         "driver": {
                             "name": "ChokePoint",
-                            "informationUri": "https://github.com/chokepoint/chokepoint",
+                            "informationUri": "https://github.com/Kabilesh-Raj-T/ChokePoint",
                             "rules": list(rules.values()),
                         }
                     },
