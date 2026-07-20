@@ -1,21 +1,23 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.6
+  - repo: local
     hooks:
       - id: ruff
-        args: ["--fix"]
-      - id: ruff-format
+        name: ruff
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi]
 
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
-    hooks:
       - id: black
+        name: black
+        entry: uv run black
+        language: system
+        types_or: [python, pyi]
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1
-    hooks:
       - id: mypy
-        additional_dependencies: []
+        name: mypy
+        entry: uv run mypy
+        language: system
+        pass_filenames: false
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

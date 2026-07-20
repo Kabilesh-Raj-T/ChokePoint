@@ -105,7 +105,7 @@ convention = "google"
 python_version = "3.12"
 strict = true
 mypy_path = "src"
-packages = ["chokepoint"]
+files = ["src/chokepoint", "scripts"]
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
