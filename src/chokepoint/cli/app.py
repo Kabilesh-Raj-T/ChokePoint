@@ -27,6 +27,7 @@ from chokepoint.report import (
     GeneratedReport,
     export_csv,
     export_mermaid,
+    export_svg,
     generate_security_report,
 )
 
@@ -166,7 +167,7 @@ def report(
 @click.option(
     "--format",
     "export_format",
-    type=click.Choice(["csv", "mermaid"]),
+    type=click.Choice(["csv", "mermaid", "svg"]),
     required=True,
     help="Export format.",
 )
@@ -177,8 +178,10 @@ def export(ctx: CliContext, topology_path: Path, *, export_format: str) -> None:
         topology = _load_topology(topology_path, quiet=True)
         if export_format == "csv":
             click.echo(export_csv(topology), nl=False)
-        else:
+        elif export_format == "mermaid":
             click.echo(export_mermaid(topology), nl=False)
+        else:
+            click.echo(export_svg(topology), nl=False)
     except Exception as error:
         _fail(error, verbose=ctx.verbose)
 

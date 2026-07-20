@@ -6,6 +6,7 @@ feature that makes them executable.
 
 The YAML parser examples are:
 
+- `basic.yaml`
 - `topology-basic.yaml`
 - `topology-multi-cloud.yaml`
 - `topology-microservices.yaml`

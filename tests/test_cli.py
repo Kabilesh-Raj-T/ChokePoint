@@ -149,6 +149,18 @@ def test_export_mermaid_outputs_graph(tmp_path: Path) -> None:
     assert result.output.startswith("flowchart LR")
 
 
+def test_export_svg_outputs_graph(tmp_path: Path) -> None:
+    path = write_topology(tmp_path)
+
+    result = CliRunner().invoke(cli, ["export", str(path), "--format", "svg"])
+
+    assert result.exit_code == 0
+    assert result.output.startswith('<?xml version="1.0" encoding="UTF-8"?>')
+    assert "<svg" in result.output
+    assert "ChokePoint dependency graph" in result.output
+    assert "cloudflare" in result.output
+
+
 def test_analyze_reports_parse_error(tmp_path: Path) -> None:
     path = write_topology(tmp_path, "services: frontend")
 

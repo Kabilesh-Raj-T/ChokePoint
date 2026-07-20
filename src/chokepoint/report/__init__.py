@@ -4,6 +4,7 @@ from chokepoint.report.export import (
     ReportExporter,
     export_csv,
     export_mermaid,
+    export_svg,
 )
 from chokepoint.report.generator import (
     DependencyGraphEdge,
@@ -41,5 +42,6 @@ __all__ = [
     "TerminalReport",
     "export_csv",
     "export_mermaid",
+    "export_svg",
     "generate_security_report",
 ]

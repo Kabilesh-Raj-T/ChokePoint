@@ -12,7 +12,7 @@ find articulation points, bridge edges, blast radius, and dependency paths.
 Run the analyzer against one of the included examples:
 
 ```bash
-uv run chokepoint analyze examples/topology-microservices.yaml --markdown
+uv run chokepoint analyze examples/basic.yaml --markdown
 ```
 
 The report shows:
@@ -106,11 +106,12 @@ uv run pre-commit install
 Common commands:
 
 ```bash
-uv run chokepoint analyze examples/topology-microservices.yaml
-uv run chokepoint graph examples/topology-microservices.yaml --json
-uv run chokepoint report examples/topology-microservices.yaml --markdown
-uv run chokepoint validate examples/topology-microservices.yaml
-uv run chokepoint export examples/topology-microservices.yaml --format mermaid
+uv run chokepoint analyze examples/basic.yaml
+uv run chokepoint graph examples/basic.yaml --json
+uv run chokepoint report examples/basic.yaml --markdown
+uv run chokepoint validate examples/basic.yaml
+uv run chokepoint export examples/basic.yaml --format mermaid
+uv run chokepoint export examples/basic.yaml --format svg
 uv run chokepoint diff examples/topology-basic.yaml examples/topology-expanded.yaml --json
 uv run chokepoint scan /path/to/repo --markdown
 ```
