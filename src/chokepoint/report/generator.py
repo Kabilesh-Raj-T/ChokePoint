@@ -19,10 +19,15 @@ from chokepoint.report.risk import (
     RiskLevel,
     RiskReport,
 )
+from chokepoint.utils.text import (
+    escape_markdown_table,
+    escape_mermaid_label,
+    human_join,
+    mermaid_node_id,
+)
 
 CRITICAL_SCORE_THRESHOLD = 80
 HIGH_SCORE_THRESHOLD = 60
-HUMAN_JOIN_PAIR_COUNT = 2
 STRUCTURAL_CONFIDENCE_DEPENDENT_THRESHOLD = 2
 SEVERITY_SORT_RANK: dict[RiskLevel | None, int] = {
     RiskLevel.CRITICAL: 4,
@@ -698,10 +703,10 @@ def _single_points_markdown(points: tuple[SinglePointOfFailure, ...]) -> list[st
     lines: list[str] = []
     for point in points:
         lines.append(
-            f"- **{_escape_markdown(point.name)}** (`{point.node_id}`) - "
+            f"- **{escape_markdown_table(point.name)}** (`{point.node_id}`) - "
             f"{_point_summary(point)}, blast radius `{point.blast_radius}`. "
             f"Confidence: `{point.confidence.value}`. "
-            f"Why it matters: {_escape_markdown(point.why_it_matters)}"
+            f"Why it matters: {escape_markdown_table(point.why_it_matters)}"
         )
     return lines
 
@@ -723,7 +728,7 @@ def _critical_dependency_markdown(findings: tuple[RiskFinding, ...]) -> list[str
             f"{finding.risk_score} | "
             f"{finding.blast_radius} | "
             f"{finding.confidence.value} | "
-            f"{_escape_markdown(finding.explanation)} |"
+            f"{escape_markdown_table(finding.explanation)} |"
         )
     return lines
 
@@ -778,13 +783,13 @@ def _mermaid_graph(report: GeneratedReport) -> str:
         label = name
         if point is not None:
             label = f"{name}\\nSPOF: {_point_summary(point)}"
-        lines.append(f'  {_mermaid_id(node_id)}["{_escape_mermaid_label(label)}"]')
+        lines.append(f'  {mermaid_node_id(node_id)}["{escape_mermaid_label(label)}"]')
 
     for edge in report.dependency_graph:
         lines.append(
             "  "
-            f"{_mermaid_id(edge.source)} -->|{edge.relationship}| "
-            f"{_mermaid_id(edge.target)}"
+            f"{mermaid_node_id(edge.source)} -->|{edge.relationship}| "
+            f"{mermaid_node_id(edge.target)}"
         )
     return "\n".join(lines)
 
@@ -794,23 +799,6 @@ def _list_or_none(values: tuple[str, ...]) -> list[str]:
     if not values:
         return ["None detected."]
     return [f"- `{value}`" for value in values]
-
-
-def _escape_markdown(value: str) -> str:
-    """Escape markdown table separators."""
-    return value.replace("|", "\\|")
-
-
-def _mermaid_id(value: str) -> str:
-    """Return a stable Mermaid node id."""
-    return "n_" + "".join(
-        character if character.isalnum() else "_" for character in value
-    )
-
-
-def _escape_mermaid_label(value: str) -> str:
-    """Escape Mermaid label text."""
-    return value.replace('"', '\\"')
 
 
 def _point_summary(point: SinglePointOfFailure) -> str:
@@ -836,32 +824,19 @@ def _point_category_text(value: str) -> str:
 
 def _impacted_text(values: tuple[str, ...]) -> str:
     """Return impacted node wording for explanations."""
-    return _human_text_list(values) or "no directly identified nodes"
-
-
-def _human_text_list(values: tuple[str, ...]) -> str:
-    """Join plain text values for human-readable explanations."""
-    if not values:
-        return ""
-    if len(values) == 1:
-        return values[0]
-    if len(values) == HUMAN_JOIN_PAIR_COUNT:
-        return f"{values[0]} and {values[1]}"
-    return f"{', '.join(values[:-1])}, and {values[-1]}"
+    return human_join(values) or "no directly identified nodes"
 
 
 def _category_text(categories: tuple[RiskCategory, ...]) -> str:
     """Return a human-readable category list."""
-    return _human_text_list(tuple(CATEGORY_LABELS[category] for category in categories))
+    return human_join(tuple(CATEGORY_LABELS[category] for category in categories))
 
 
 def _provider_text(providers: tuple[str, ...]) -> str:
     """Return provider context for an explanation."""
     if not providers:
         return ""
-    return (
-        f" across {_human_text_list(tuple(provider.upper() for provider in providers))}"
-    )
+    return f" across {human_join(tuple(provider.upper() for provider in providers))}"
 
 
 def _category_impact(category: RiskCategory) -> str:

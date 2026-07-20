@@ -12,9 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from chokepoint.graph import GraphAnalyzer, GraphBuilder
 from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
+from chokepoint.utils.text import human_join
 
 MIN_SHARED_DEPENDENTS = 2
-HUMAN_JOIN_PAIR_COUNT = 2
 
 
 class RiskLevel(StrEnum):
@@ -518,7 +518,7 @@ def _shared_explanation(
     """Generate human-readable explanation text for a shared finding."""
     label = category.value.replace("_", " ").upper()
     if impacted_providers:
-        providers = _human_join(
+        providers = human_join(
             tuple(provider.upper() for provider in impacted_providers)
         )
         return (
@@ -526,17 +526,6 @@ def _shared_explanation(
             f"with a blast radius of {len(impacted_nodes)} node(s)."
         )
     return f"{node.name} {label} is shared by {len(impacted_nodes)} dependent node(s)."
-
-
-def _human_join(values: tuple[str, ...]) -> str:
-    """Join values for human-readable explanation text."""
-    if not values:
-        return ""
-    if len(values) == 1:
-        return values[0]
-    if len(values) == HUMAN_JOIN_PAIR_COUNT:
-        return f"{values[0]} and {values[1]}"
-    return f"{', '.join(values[:-1])}, and {values[-1]}"
 
 
 def _contains_any(text: str, needles: Iterable[str]) -> bool:
