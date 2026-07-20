@@ -36,6 +36,10 @@ uv run black src tests
 uv run ruff check src tests
 uv run mypy
 uv run pytest
+uv build
+pip install -e .
+pip install dist/chokepoint-1.0.0-py3-none-any.whl
 ```
 
-Coverage is enforced at 95% or higher.
+Coverage is enforced at 95% or higher. CI also smoke-installs the built wheel
+and validates an example topology through the installed `chokepoint` command.

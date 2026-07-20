@@ -44,3 +44,11 @@ jobs:
 
       - name: Build package
         run: uv build
+
+      - name: Smoke install built wheel
+        run: |
+          python -m venv .wheel-smoke
+          . .wheel-smoke/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          chokepoint validate examples/topology-basic.yaml

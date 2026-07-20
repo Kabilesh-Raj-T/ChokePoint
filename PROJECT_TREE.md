@@ -68,6 +68,7 @@
 |-- tests/
 |   |-- test_cli.py
 |   |-- test_docker_compose_parser.py
+|   |-- test_examples.py
 |   |-- test_graph_engine.py
 |   |-- test_imports.py
 |   |-- test_report_generator.py
