@@ -31,6 +31,7 @@ def test_generate_security_report_returns_structured_report() -> None:
     assert len(report.single_points_of_failure) == 1
     assert report.single_points_of_failure[0].node_id == "cloudflare"
     assert report.single_points_of_failure[0].category == "dns, cdn"
+    assert report.single_points_of_failure[0].confidence.value == "high"
     assert "shared DNS and CDN dependency" in (
         report.single_points_of_failure[0].why_it_matters
     )
@@ -50,8 +51,11 @@ def test_report_json_contains_nested_security_context() -> None:
     assert payload["graph_report"]["node_count"] == EXPECTED_NODE_COUNT
     assert payload["dependency_graph"][0]["target"] == "cloudflare"
     assert payload["single_points_of_failure"][0]["why_it_matters"]
+    assert payload["single_points_of_failure"][0]["confidence"] == "high"
+    assert payload["single_points_of_failure"][0]["confidence_reason"]
     assert payload["dependency_table"][0]["relationship"] == "depends_on"
     assert payload["critical_dependencies"][0]["dependency_chain"]
+    assert payload["critical_dependencies"][0]["confidence"] == "high"
 
 
 def test_report_markdown_is_github_security_report_friendly() -> None:
@@ -66,6 +70,7 @@ def test_report_markdown_is_github_security_report_friendly() -> None:
     assert "```mermaid" in markdown
     assert "SPOF: critical DNS" in markdown
     assert "## Hidden Single Points of Failure" in markdown
+    assert "Confidence: `high`" in markdown
     assert "Why it matters:" in markdown
     assert "## Critical Dependencies" in markdown
     assert "## Articulation Points" in markdown
@@ -74,7 +79,8 @@ def test_report_markdown_is_github_security_report_friendly() -> None:
     assert "## Dependency Table" in markdown
     assert "## Blast Radius" in markdown
     assert (
-        "| Level | Category | Node | Score | Blast Radius | Explanation |" in markdown
+        "| Level | Category | Node | Score | Blast Radius | Confidence | Explanation |"
+        in markdown
     )
 
 
@@ -90,6 +96,7 @@ def test_terminal_report_renders_expected_sections() -> None:
     assert "Critical Dependencies" in output
     assert "Dependency Graph" in output
     assert "Hidden Single Points of Failure" in output
+    assert "Confidence" in output
     assert "Graph Choke Points" in output
     assert "Recommendations" in output
     assert "Dependency Table" in output
@@ -170,6 +177,7 @@ def test_structural_single_point_explains_articulation_without_risk_rule() -> No
     assert report.risk_score == 0
     assert report.single_points_of_failure[0].node_id == "statefulset"
     assert report.single_points_of_failure[0].severity is None
+    assert report.single_points_of_failure[0].confidence.value == "low"
     assert "structural cut point" in report.single_points_of_failure[0].why_it_matters
 
 

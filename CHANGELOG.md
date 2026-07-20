@@ -5,6 +5,13 @@ All notable changes to ChokePoint are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses semantic versioning.
 
+## [Unreleased]
+
+### Added
+
+- Confidence levels and confidence reasons on risk findings and generated
+  single-point-of-failure reports.
+
 ## [1.0.0] - 2026-07-19
 
 Portfolio milestone focused on the core infrastructure graph model, CLI, and

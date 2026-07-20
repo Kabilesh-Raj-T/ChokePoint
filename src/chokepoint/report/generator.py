@@ -12,6 +12,7 @@ from rich.table import Table
 from chokepoint.graph import AnalysisReport, GraphAnalyzer, GraphBuilder
 from chokepoint.models import Edge, Node, NodeType, Topology
 from chokepoint.report.risk import (
+    ConfidenceLevel,
     RiskAnalyzer,
     RiskCategory,
     RiskFinding,
@@ -28,6 +29,11 @@ SEVERITY_SORT_RANK: dict[RiskLevel | None, int] = {
     RiskLevel.MEDIUM: 2,
     RiskLevel.LOW: 1,
     None: 0,
+}
+CONFIDENCE_SORT_RANK: dict[ConfidenceLevel, int] = {
+    ConfidenceLevel.HIGH: 3,
+    ConfidenceLevel.MEDIUM: 2,
+    ConfidenceLevel.LOW: 1,
 }
 CATEGORY_LABELS: dict[RiskCategory, str] = {
     RiskCategory.DNS: "DNS",
@@ -80,6 +86,8 @@ class SinglePointOfFailure(BaseModel):
     node_type: NodeType
     severity: RiskLevel | None
     category: str
+    confidence: ConfidenceLevel
+    confidence_reason: str
     blast_radius: int = Field(ge=0)
     impacted_nodes: tuple[str, ...]
     why_it_matters: str
@@ -376,6 +384,11 @@ def _single_points_of_failure(
                 node_type=node.node_type,
                 severity=None,
                 category="structural_articulation",
+                confidence=ConfidenceLevel.LOW,
+                confidence_reason=(
+                    "Based only on graph articulation structure; verify runtime "
+                    "impact with service owners."
+                ),
                 blast_radius=len(impacted_nodes),
                 impacted_nodes=impacted_nodes,
                 why_it_matters=(
@@ -414,6 +427,11 @@ def _risk_single_point(
 ) -> SinglePointOfFailure:
     """Build a single-point explanation from a risk finding."""
     severity = max((finding.risk_level for finding in findings), key=_severity_rank)
+    confidence = max(
+        (finding.confidence for finding in findings),
+        key=_confidence_rank,
+    )
+    confidence_reason = _confidence_reason(findings, confidence)
     categories = tuple(
         sorted(
             {finding.category for finding in findings},
@@ -455,6 +473,8 @@ def _risk_single_point(
         node_type=node.node_type,
         severity=severity,
         category=", ".join(category.value for category in categories),
+        confidence=confidence,
+        confidence_reason=confidence_reason,
         blast_radius=len(impacted_nodes),
         impacted_nodes=impacted_nodes,
         why_it_matters=why_it_matters,
@@ -536,6 +556,7 @@ def _critical_dependencies_table(findings: Iterable[RiskFinding]) -> Table:
     table.add_column("Node")
     table.add_column("Score", justify="right")
     table.add_column("Blast Radius", justify="right")
+    table.add_column("Confidence")
     table.add_column("Explanation")
     for finding in findings:
         table.add_row(
@@ -543,6 +564,7 @@ def _critical_dependencies_table(findings: Iterable[RiskFinding]) -> Table:
             finding.node_id,
             str(finding.risk_score),
             str(finding.blast_radius),
+            finding.confidence.value,
             finding.explanation,
         )
     return table
@@ -584,9 +606,17 @@ def _single_points_table(points: tuple[SinglePointOfFailure, ...]) -> Table:
     table.add_column("Severity")
     table.add_column("Category")
     table.add_column("Blast Radius", justify="right")
+    table.add_column("Confidence")
     table.add_column("Why It Matters")
     if not points:
-        table.add_row("None", "none", "none", "0", "No single points detected.")
+        table.add_row(
+            "None",
+            "none",
+            "none",
+            "0",
+            "none",
+            "No single points detected.",
+        )
         return table
     for point in points:
         table.add_row(
@@ -594,6 +624,7 @@ def _single_points_table(points: tuple[SinglePointOfFailure, ...]) -> Table:
             point.severity.value if point.severity else "structural",
             _point_category_text(point.category),
             str(point.blast_radius),
+            point.confidence.value,
             point.why_it_matters,
         )
     return table
@@ -647,6 +678,7 @@ def _single_points_markdown(points: tuple[SinglePointOfFailure, ...]) -> list[st
         lines.append(
             f"- **{_escape_markdown(point.name)}** (`{point.node_id}`) - "
             f"{_point_summary(point)}, blast radius `{point.blast_radius}`. "
+            f"Confidence: `{point.confidence.value}`. "
             f"Why it matters: {_escape_markdown(point.why_it_matters)}"
         )
     return lines
@@ -657,8 +689,8 @@ def _critical_dependency_markdown(findings: tuple[RiskFinding, ...]) -> list[str
     if not findings:
         return ["No critical dependencies detected."]
     lines = [
-        "| Level | Category | Node | Score | Blast Radius | Explanation |",
-        "| --- | --- | --- | ---: | ---: | --- |",
+        "| Level | Category | Node | Score | Blast Radius | Confidence | Explanation |",
+        "| --- | --- | --- | ---: | ---: | --- | --- |",
     ]
     for finding in findings:
         lines.append(
@@ -668,6 +700,7 @@ def _critical_dependency_markdown(findings: tuple[RiskFinding, ...]) -> list[str
             f"`{finding.node_id}` | "
             f"{finding.risk_score} | "
             f"{finding.blast_radius} | "
+            f"{finding.confidence.value} | "
             f"{_escape_markdown(finding.explanation)} |"
         )
     return lines
@@ -852,6 +885,26 @@ def _category_impact(category: RiskCategory) -> str:
 def _severity_rank(severity: RiskLevel | None) -> int:
     """Return sort rank for severity."""
     return SEVERITY_SORT_RANK[severity]
+
+
+def _confidence_rank(confidence: ConfidenceLevel) -> int:
+    """Return sort rank for confidence."""
+    return CONFIDENCE_SORT_RANK[confidence]
+
+
+def _confidence_reason(
+    findings: tuple[RiskFinding, ...],
+    confidence: ConfidenceLevel,
+) -> str:
+    """Return a representative confidence reason."""
+    reasons = tuple(
+        dict.fromkeys(
+            finding.confidence_reason
+            for finding in findings
+            if finding.confidence == confidence
+        )
+    )
+    return reasons[0] if reasons else "Confidence is based on available graph evidence."
 
 
 def _score_style(score: int) -> str:

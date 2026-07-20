@@ -15,6 +15,7 @@ from chokepoint.report.generator import (
     generate_security_report,
 )
 from chokepoint.report.risk import (
+    ConfidenceLevel,
     DependencyChain,
     RiskAnalyzer,
     RiskCategory,
@@ -24,6 +25,7 @@ from chokepoint.report.risk import (
 )
 
 __all__ = [
+    "ConfidenceLevel",
     "DependencyChain",
     "DependencyGraphEdge",
     "DependencyTableRow",

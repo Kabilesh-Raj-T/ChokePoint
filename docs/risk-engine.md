@@ -37,6 +37,8 @@ Each finding includes:
 - `criticality`
 - `blast_radius`
 - `dependency_chain`
+- `confidence`
+- `confidence_reason`
 - `impacted_nodes`
 - `impacted_providers`
 - `explanation`
@@ -44,10 +46,19 @@ Each finding includes:
 The report-level `risk_score` is the highest finding score. Scores are bounded
 from `0` to `100` and combine severity, blast radius, and provider diversity.
 
+Confidence is evidence quality, not severity:
+
+| Confidence | Meaning |
+| --- | --- |
+| High | The category comes from an explicit typed infrastructure node and dependency edges. |
+| Medium | The dependency edge is explicit, but the category or operational impact is partly inferred. |
+| Low | The finding is based on graph structure or name/path text and should be manually verified. |
+
 Generated reports also include:
 
 - `dependency_graph`: normalized edges used to render the topology as a
   Mermaid dependency graph.
 - `single_points_of_failure`: one explanatory record per risky shared
   dependency or structural articulation point, including severity, category,
-  blast radius, impacted nodes, and `why_it_matters` text for human review.
+  confidence, blast radius, impacted nodes, and `why_it_matters` text for human
+  review.

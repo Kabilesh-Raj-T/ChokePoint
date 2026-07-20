@@ -19,6 +19,7 @@ The report shows:
 
 - a Mermaid dependency graph
 - hidden single points of failure
+- confidence labels for findings
 - articulation points and bridge edges
 - blast radius and dependency chains
 
@@ -32,6 +33,8 @@ The report shows:
 - Detects articulation points, bridge edges, connected components, cycles, and
   centrality.
 - Generates terminal, Markdown, JSON, CSV, and Mermaid output.
+- Labels findings with high, medium, or low confidence so inferred claims can be
+  reviewed before action.
 - Provides a Click/Rich CLI for local analysis.
 
 ## What This Project Demonstrates

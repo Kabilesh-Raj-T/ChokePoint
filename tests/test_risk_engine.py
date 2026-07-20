@@ -4,7 +4,13 @@ import json
 
 from chokepoint.graph import GraphBuilder
 from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.report import RiskAnalyzer, RiskCategory, RiskLevel, RiskReport
+from chokepoint.report import (
+    ConfidenceLevel,
+    RiskAnalyzer,
+    RiskCategory,
+    RiskLevel,
+    RiskReport,
+)
 
 SHARED_BLAST_RADIUS = 2
 TRANSITIVE_BLAST_RADIUS = 3
@@ -99,6 +105,8 @@ def test_critical_shared_dns_report_contains_blast_radius_and_explanation() -> N
     assert finding.criticality is RiskLevel.CRITICAL
     assert finding.risk_score >= CRITICAL_SCORE_FLOOR
     assert finding.blast_radius == SHARED_BLAST_RADIUS
+    assert finding.confidence is ConfidenceLevel.HIGH
+    assert "explicit typed infrastructure node" in finding.confidence_reason
     assert finding.impacted_nodes == ("aws-service", "azure-service")
     assert finding.impacted_providers == ("aws", "azure")
     assert "Cloudflare DNS" in finding.explanation
@@ -155,6 +163,7 @@ def test_shared_cdn_is_critical() -> None:
 
     assert report.findings[0].category is RiskCategory.CDN
     assert report.findings[0].risk_level is RiskLevel.CRITICAL
+    assert report.findings[0].confidence is ConfidenceLevel.MEDIUM
 
 
 def test_shared_monitoring_and_networking_are_high_risk() -> None:
@@ -252,6 +261,7 @@ def test_low_single_service_articulation_is_reported() -> None:
 
     assert report.findings[0].category is RiskCategory.SINGLE_SERVICE_ARTICULATION
     assert report.findings[0].risk_level is RiskLevel.LOW
+    assert report.findings[0].confidence is ConfidenceLevel.MEDIUM
     assert report.findings[0].blast_radius == 1
     assert report.findings[0].impacted_nodes == ("frontend",)
     assert report.findings[0].dependency_chain[0].path == ("frontend", "adapter")
@@ -284,6 +294,23 @@ def test_dependency_chain_tracks_transitive_dependency_path() -> None:
     }
 
 
+def test_name_inferred_storage_finding_is_low_confidence() -> None:
+    topology = topology_with_shared_dependency(
+        node(
+            "./tests/resources/coredns",
+            provider="docker",
+            node_type=NodeType.STORAGE,
+            name="./tests/resources/coredns",
+        )
+    )
+
+    report = RiskAnalyzer().analyze(topology)
+    dns_finding = finding_by_category(report, RiskCategory.DNS)
+
+    assert dns_finding.confidence is ConfidenceLevel.LOW
+    assert "storage or bind-mount text" in dns_finding.confidence_reason
+
+
 def test_analyze_graph_accepts_networkx_graph_input() -> None:
     topology = topology_with_shared_dependency(
         node("route53", provider="aws", node_type=NodeType.DNS, name="Route53")
@@ -306,6 +333,7 @@ def test_report_exports_structured_json() -> None:
 
     assert payload["finding_count"] >= 1
     assert payload["findings"][0]["risk_level"] == "critical"
+    assert payload["findings"][0]["confidence"] == "high"
     assert "dependency_chain" in payload["findings"][0]
 
 

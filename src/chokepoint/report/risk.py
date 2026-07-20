@@ -26,6 +26,14 @@ class RiskLevel(StrEnum):
     LOW = "low"
 
 
+class ConfidenceLevel(StrEnum):
+    """Evidence confidence for a risk finding."""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class RiskCategory(StrEnum):
     """Infrastructure dependency categories used by risk rules."""
 
@@ -66,6 +74,8 @@ class RiskFinding(BaseModel):
     impacted_nodes: tuple[str, ...]
     impacted_providers: tuple[str, ...]
     dependency_chain: tuple[DependencyChain, ...]
+    confidence: ConfidenceLevel
+    confidence_reason: str
     explanation: str
 
 
@@ -164,6 +174,7 @@ class RiskAnalyzer:
                 findings,
                 key=lambda finding: (
                     -finding.risk_score,
+                    -_confidence_rank(finding.confidence),
                     finding.risk_level.value,
                     finding.node_id,
                     finding.category.value,
@@ -222,6 +233,7 @@ class RiskAnalyzer:
         chains = dependency_index.dependency_chains(node.id)
         risk_level = self.CATEGORY_LEVELS[category]
         score = _risk_score(risk_level, len(impacted_nodes), len(impacted_providers))
+        confidence, confidence_reason = _shared_confidence(node, category)
 
         return RiskFinding(
             node_id=node.id,
@@ -235,6 +247,8 @@ class RiskAnalyzer:
             impacted_nodes=impacted_nodes,
             impacted_providers=impacted_providers,
             dependency_chain=chains,
+            confidence=confidence,
+            confidence_reason=confidence_reason,
             explanation=_shared_explanation(
                 node,
                 category,
@@ -266,6 +280,11 @@ class RiskAnalyzer:
             impacted_nodes=impacted_nodes,
             impacted_providers=impacted_providers,
             dependency_chain=chains,
+            confidence=ConfidenceLevel.MEDIUM,
+            confidence_reason=(
+                "Based on explicit graph structure and dependency edges; verify "
+                "runtime impact with service owners."
+            ),
             explanation=(
                 f"{node.name} is an articulation point for a single service path."
             ),
@@ -408,6 +427,72 @@ def _classify_node(node: Node) -> tuple[RiskCategory, ...]:
         categories.append(RiskCategory.EMAIL)
 
     return tuple(dict.fromkeys(categories))
+
+
+def _shared_confidence(
+    node: Node,
+    category: RiskCategory,
+) -> tuple[ConfidenceLevel, str]:
+    """Return evidence confidence for a shared dependency finding."""
+    source = str(node.metadata.get("format") or node.metadata.get("source") or "")
+
+    if _category_matches_node_type(node, category):
+        if source == "docker-compose" and category == RiskCategory.NETWORKING:
+            return (
+                ConfidenceLevel.MEDIUM,
+                "Based on explicit Docker Compose network membership; shared "
+                "network impact should be confirmed against the deployment model.",
+            )
+        return (
+            ConfidenceLevel.HIGH,
+            "Based on an explicit typed infrastructure node and dependency edges.",
+        )
+
+    if node.node_type == NodeType.STORAGE:
+        return (
+            ConfidenceLevel.LOW,
+            "Category was inferred from storage or bind-mount text; verify this is "
+            "a real infrastructure dependency.",
+        )
+
+    if category == RiskCategory.CDN and node.node_type in {
+        NodeType.DNS,
+        NodeType.EXTERNAL,
+    }:
+        return (
+            ConfidenceLevel.MEDIUM,
+            "Category was inferred from provider or node name text on an explicit "
+            "dependency node.",
+        )
+
+    return (
+        ConfidenceLevel.MEDIUM,
+        "Category was inferred from node name, provider, or metadata text and "
+        "explicit dependency edges.",
+    )
+
+
+def _confidence_rank(confidence: ConfidenceLevel) -> int:
+    """Return a sort rank for confidence."""
+    ranks = {
+        ConfidenceLevel.HIGH: 3,
+        ConfidenceLevel.MEDIUM: 2,
+        ConfidenceLevel.LOW: 1,
+    }
+    return ranks[confidence]
+
+
+def _category_matches_node_type(node: Node, category: RiskCategory) -> bool:
+    """Return whether a node type directly supports a risk category."""
+    return (
+        (category == RiskCategory.DNS and node.node_type == NodeType.DNS)
+        or (category == RiskCategory.IDENTITY and node.node_type == NodeType.IDENTITY)
+        or (
+            category == RiskCategory.SECRETS_MANAGER
+            and node.node_type == NodeType.SECRET
+        )
+        or (category == RiskCategory.NETWORKING and node.node_type == NodeType.NETWORK)
+    )
 
 
 def _risk_score(
