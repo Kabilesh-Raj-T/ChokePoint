@@ -29,6 +29,7 @@
 |   |-- docker-compose-parser.md
 |   |-- exports.md
 |   |-- graph-engine.md
+|   |-- repository-scanner.md
 |   |-- risk-engine.md
 |   |-- terraform-parser.md
 |   `-- yaml-parser.md
@@ -57,6 +58,7 @@
 |       |-- parser/
 |       |   |-- __init__.py
 |       |   |-- docker_compose_parser.py
+|       |   |-- repository_scanner.py
 |       |   |-- terraform_parser.py
 |       |   `-- yaml_parser.py
 |       |-- py.typed
@@ -72,6 +74,7 @@
 |   |-- test_graph_engine.py
 |   |-- test_imports.py
 |   |-- test_report_generator.py
+|   |-- test_repository_scanner.py
 |   |-- test_risk_engine.py
 |   |-- test_terraform_parser.py
 |   |-- test_topology_models.py

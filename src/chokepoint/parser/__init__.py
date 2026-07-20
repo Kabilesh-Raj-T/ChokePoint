@@ -6,6 +6,13 @@ from chokepoint.parser.docker_compose_parser import (
     parse_docker_compose_file,
     parse_docker_compose_text,
 )
+from chokepoint.parser.repository_scanner import (
+    RepositoryArtifact,
+    RepositoryScanIssue,
+    RepositoryScanner,
+    RepositoryScanResult,
+    scan_repository,
+)
 from chokepoint.parser.terraform_parser import (
     TERRAFORM_RESOURCE_MAPPINGS,
     TerraformParseError,
@@ -27,6 +34,10 @@ __all__ = [
     "TERRAFORM_RESOURCE_MAPPINGS",
     "DockerComposeParseError",
     "DockerComposeParser",
+    "RepositoryArtifact",
+    "RepositoryScanIssue",
+    "RepositoryScanResult",
+    "RepositoryScanner",
     "TerraformParseError",
     "TerraformParser",
     "TerraformResourceMapping",
@@ -40,4 +51,5 @@ __all__ = [
     "parse_terraform_text",
     "parse_topology_yaml_file",
     "parse_topology_yaml_text",
+    "scan_repository",
 ]

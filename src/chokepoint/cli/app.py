@@ -17,7 +17,12 @@ from rich.table import Table
 from chokepoint.graph import GraphAnalyzer, GraphBuilder, TopologyDiff, diff_topologies
 from chokepoint.graph.engine import AnalysisReport
 from chokepoint.models import Topology
-from chokepoint.parser import TopologyParseError, parse_topology_yaml_file
+from chokepoint.parser import (
+    RepositoryScanResult,
+    TopologyParseError,
+    parse_topology_yaml_file,
+    scan_repository,
+)
 from chokepoint.report import (
     GeneratedReport,
     export_csv,
@@ -241,6 +246,37 @@ def validate(ctx: CliContext, topology_path: Path, *, as_json: bool) -> None:
         )
 
 
+@cli.command()
+@click.argument(
+    "repo_path",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit structured JSON.")
+@click.option("--markdown", is_flag=True, help="Emit Markdown.")
+@click.pass_obj
+def scan(
+    ctx: CliContext,
+    repo_path: Path,
+    *,
+    as_json: bool,
+    markdown: bool,
+) -> None:
+    """Scan a repository for supported infrastructure files."""
+    try:
+        quiet = as_json or markdown
+        scan_result = _scan_repository(repo_path, quiet=quiet)
+        generated_report = generate_security_report(scan_result.topology)
+    except Exception as error:
+        _fail(error, verbose=ctx.verbose)
+
+    if as_json:
+        click.echo(_scan_json(scan_result, generated_report))
+    elif markdown:
+        click.echo(_scan_markdown(scan_result, generated_report))
+    else:
+        _emit_scan_terminal(scan_result, generated_report)
+
+
 def main() -> None:
     """Run the ChokePoint CLI."""
     cli()
@@ -282,6 +318,29 @@ def _security_report(topology: Topology, *, quiet: bool) -> GeneratedReport:
         return generate_security_report(topology)
 
 
+def _scan_repository(path: Path, *, quiet: bool) -> RepositoryScanResult:
+    """Scan a repository with progress output."""
+    if quiet:
+        return scan_repository(path)
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+        console=console,
+    ) as progress:
+        progress.add_task(f"Scanning {path.name}", total=None)
+        result = scan_repository(path)
+    LOGGER.info(
+        "Scanned repository with %s artifact(s), %s issue(s), %s node(s), %s edge(s)",
+        len(result.artifacts),
+        len(result.issues),
+        len(result.topology.nodes),
+        len(result.topology.edges),
+    )
+    return result
+
+
 def _emit_security_report(
     report: GeneratedReport,
     *,
@@ -295,6 +354,117 @@ def _emit_security_report(
         click.echo(report.to_markdown())
     else:
         console.print(report.to_terminal())
+
+
+def _emit_scan_terminal(
+    scan_result: RepositoryScanResult,
+    report: GeneratedReport,
+) -> None:
+    """Emit repository scan summary and report to the terminal."""
+    summary = Table(title="Repository Scan")
+    summary.add_column("Metric", style="bold cyan")
+    summary.add_column("Value", style="green")
+    summary.add_row("Root", scan_result.root)
+    summary.add_row("Artifacts", str(len(scan_result.artifacts)))
+    summary.add_row("Issues", str(len(scan_result.issues)))
+    summary.add_row("Nodes", str(len(scan_result.topology.nodes)))
+    summary.add_row("Edges", str(len(scan_result.topology.edges)))
+    console.print(summary)
+
+    artifacts = Table(title="Parsed Artifacts")
+    artifacts.add_column("Kind")
+    artifacts.add_column("Path")
+    artifacts.add_column("Nodes", justify="right")
+    artifacts.add_column("Edges", justify="right")
+    if not scan_result.artifacts:
+        artifacts.add_row("none", "No supported infrastructure files found", "0", "0")
+    for artifact in scan_result.artifacts:
+        artifacts.add_row(
+            artifact.kind,
+            artifact.path,
+            str(artifact.nodes),
+            str(artifact.edges),
+        )
+    console.print(artifacts)
+
+    if scan_result.issues:
+        issues = Table(title="Skipped Artifacts")
+        issues.add_column("Kind")
+        issues.add_column("Path")
+        issues.add_column("Error")
+        for issue in scan_result.issues:
+            issues.add_row(issue.kind, issue.path, issue.error)
+        console.print(issues)
+
+    if scan_result.topology.nodes:
+        console.print(report.to_terminal())
+
+
+def _scan_json(scan_result: RepositoryScanResult, report: GeneratedReport) -> str:
+    """Return repository scan JSON."""
+    payload = {
+        "root": scan_result.root,
+        "artifact_count": len(scan_result.artifacts),
+        "issue_count": len(scan_result.issues),
+        "nodes": len(scan_result.topology.nodes),
+        "edges": len(scan_result.topology.edges),
+        "artifacts": [
+            artifact.model_dump(mode="json") for artifact in scan_result.artifacts
+        ],
+        "issues": [issue.model_dump(mode="json") for issue in scan_result.issues],
+        "report": json.loads(report.to_json()),
+    }
+    return json.dumps(payload, indent=2)
+
+
+def _scan_markdown(scan_result: RepositoryScanResult, report: GeneratedReport) -> str:
+    """Return repository scan Markdown."""
+    lines = [
+        "# ChokePoint Repository Scan",
+        "",
+        f"- Root: `{scan_result.root}`",
+        f"- Parsed artifacts: `{len(scan_result.artifacts)}`",
+        f"- Skipped artifacts: `{len(scan_result.issues)}`",
+        f"- Nodes: `{len(scan_result.topology.nodes)}`",
+        f"- Edges: `{len(scan_result.topology.edges)}`",
+        "",
+        "## Parsed Artifacts",
+        "",
+        *_scan_artifacts_markdown(scan_result),
+        "",
+        "## Skipped Artifacts",
+        "",
+        *_scan_issues_markdown(scan_result),
+        "",
+        report.to_markdown(),
+    ]
+    return "\n".join(lines)
+
+
+def _scan_artifacts_markdown(scan_result: RepositoryScanResult) -> list[str]:
+    """Render repository scan artifacts as Markdown."""
+    if not scan_result.artifacts:
+        return ["No supported infrastructure files found."]
+    lines = [
+        "| Kind | Path | Nodes | Edges |",
+        "| --- | --- | ---: | ---: |",
+    ]
+    for artifact in scan_result.artifacts:
+        lines.append(
+            f"| `{artifact.kind}` | `{artifact.path}` | "
+            f"{artifact.nodes} | {artifact.edges} |"
+        )
+    return lines
+
+
+def _scan_issues_markdown(scan_result: RepositoryScanResult) -> list[str]:
+    """Render repository scan issues as Markdown."""
+    if not scan_result.issues:
+        return ["None."]
+    return [
+        f"- `{issue.kind}` `{issue.path}`: {issue.error}"
+        for issue in scan_result.issues
+    ]
 
 
 def _graph_markdown(analysis: AnalysisReport) -> str:

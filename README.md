@@ -28,6 +28,8 @@ The report shows:
 - Parses YAML infrastructure dependency files.
 - Parses basic Terraform HCL resources.
 - Parses basic Docker Compose services and `depends_on` relationships.
+- Scans repositories to auto-discover supported topology, Terraform, and Docker
+  Compose files.
 - Builds a typed topology model with Pydantic.
 - Converts infrastructure dependencies into a NetworkX graph.
 - Detects articulation points, bridge edges, connected components, cycles, and
@@ -101,6 +103,7 @@ uv run chokepoint report examples/topology-microservices.yaml --markdown
 uv run chokepoint validate examples/topology-microservices.yaml
 uv run chokepoint export examples/topology-microservices.yaml --format mermaid
 uv run chokepoint diff examples/topology-basic.yaml examples/topology-expanded.yaml --json
+uv run chokepoint scan /path/to/repo --markdown
 ```
 
 `analyze` and `report` explain the topology in terms of a visual dependency
@@ -130,6 +133,9 @@ Terraform ingestion is documented in
 
 Docker Compose ingestion is documented in
 [docs/docker-compose-parser.md](docs/docker-compose-parser.md).
+
+Repository auto-discovery is documented in
+[docs/repository-scanner.md](docs/repository-scanner.md).
 
 Risk analysis output is documented in [docs/risk-engine.md](docs/risk-engine.md).
 

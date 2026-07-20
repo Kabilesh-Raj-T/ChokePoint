@@ -11,6 +11,8 @@ and this project uses semantic versioning.
 
 - Confidence levels and confidence reasons on risk findings and generated
   single-point-of-failure reports.
+- Repository scanner and `chokepoint scan` command for best-effort analysis of
+  arbitrary repositories.
 - Terraform mappings for common AWS VPC route, network ACL, security group rule,
   IAM attachment, EKS access, compute, and CloudWatch log group resources.
 

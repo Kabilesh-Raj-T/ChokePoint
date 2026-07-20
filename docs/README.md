@@ -7,6 +7,7 @@ in [Architecture.md](../Architecture.md).
 - [YAML parser](yaml-parser.md)
 - [Terraform parser](terraform-parser.md)
 - [Docker Compose parser](docker-compose-parser.md)
+- [Repository scanner](repository-scanner.md)
 - [Graph engine](graph-engine.md)
 - [Risk engine](risk-engine.md)
 - [Exports](exports.md)

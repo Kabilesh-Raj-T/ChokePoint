@@ -10,6 +10,8 @@ from chokepoint.cli import cli
 
 EXPECTED_GRAPH_NODES = 5
 EXPECTED_GRAPH_EDGES = 2
+EXPECTED_SCAN_ARTIFACTS = 2
+MINIMUM_SCAN_NODES = 4
 
 
 TOPOLOGY_YAML = """
@@ -296,7 +298,44 @@ def test_help_lists_commands() -> None:
     assert "export" in result.output
     assert "graph" in result.output
     assert "report" in result.output
+    assert "scan" in result.output
     assert "validate" in result.output
+
+
+def test_scan_json_outputs_repository_report(tmp_path: Path) -> None:
+    write_scan_fixture(tmp_path)
+
+    result = CliRunner().invoke(cli, ["scan", str(tmp_path), "--json"])
+
+    payload = json.loads(result.output)
+    assert result.exit_code == 0
+    assert payload["artifact_count"] == EXPECTED_SCAN_ARTIFACTS
+    assert payload["issue_count"] == 0
+    assert payload["nodes"] >= MINIMUM_SCAN_NODES
+    assert payload["report"]["title"] == "ChokePoint Security Report"
+    assert {artifact["kind"] for artifact in payload["artifacts"]} == {
+        "docker_compose",
+        "terraform",
+    }
+
+
+def test_scan_markdown_outputs_repository_summary(tmp_path: Path) -> None:
+    write_scan_fixture(tmp_path)
+
+    result = CliRunner().invoke(cli, ["scan", str(tmp_path), "--markdown"])
+
+    assert result.exit_code == 0
+    assert "# ChokePoint Repository Scan" in result.output
+    assert "## Parsed Artifacts" in result.output
+    assert "# ChokePoint Security Report" in result.output
+
+
+def test_scan_terminal_outputs_summary_for_empty_repo(tmp_path: Path) -> None:
+    result = CliRunner().invoke(cli, ["scan", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "Repository Scan" in result.output
+    assert "No supported infrastructure files found" in result.output
 
 
 def test_main_delegates_to_click(monkeypatch) -> None:
@@ -311,3 +350,28 @@ def test_main_delegates_to_click(monkeypatch) -> None:
     cli_app.main()
 
     assert called
+
+
+def write_scan_fixture(path: Path) -> None:
+    (path / "docker-compose.yml").write_text(
+        """
+services:
+  api:
+    depends_on:
+      - db
+  db:
+    image: postgres
+""",
+        encoding="utf-8",
+    )
+    infra = path / "infra"
+    infra.mkdir()
+    (infra / "main.tf").write_text(
+        """
+resource "aws_vpc" "main" {}
+resource "aws_subnet" "public" {
+  vpc_id = aws_vpc.main.id
+}
+""",
+        encoding="utf-8",
+    )
