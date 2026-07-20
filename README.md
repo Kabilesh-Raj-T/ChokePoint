@@ -79,12 +79,19 @@ uv sync --extra dev
 uv run black --check src tests
 uv run ruff check src tests
 uv run mypy
-uv run pytest
+uv run pytest -q
 ```
 
-Use `uv run pytest`, not a global `pytest` command. The project uses a
-`src/` layout and relies on uv to create the Python 3.12+ environment and
+Use `uv run pytest -q`, not a globally installed `pytest` command. The project
+uses a `src/` layout and relies on uv to create the Python 3.12+ environment and
 install test dependencies before collection.
+
+If you prefer plain `pytest -q`, activate the uv virtual environment first:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+pytest -q
+```
 
 Install local hooks:
 

@@ -19,12 +19,19 @@ uv sync --extra dev
 uv run black --check src tests
 uv run ruff check src tests
 uv run mypy
-uv run pytest
+uv run pytest -q
 ```
 
 If test collection fails with missing imports, verify that the command is being
 run through uv from the repository root. Running a globally installed `pytest`
 without first installing the project dependencies is not a supported check.
+
+Plain `pytest -q` is fine after activating the project virtual environment:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+pytest -q
+```
 
 ## Code Style
 
