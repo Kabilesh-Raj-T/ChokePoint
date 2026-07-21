@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report incorrect behavior in ChokePoint
+about: Report incorrect behavior in BlastRadius
 title: "[Bug]: "
 labels: bug
 assignees: ""
@@ -22,7 +22,7 @@ What did you expect to happen?
 
 ## Environment
 
-- ChokePoint version:
+- BlastRadius version:
 - Python version:
 - Operating system:
 

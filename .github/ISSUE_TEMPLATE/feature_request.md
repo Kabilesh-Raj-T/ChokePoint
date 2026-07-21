@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an improvement for ChokePoint
+about: Suggest an improvement for BlastRadius
 title: "[Feature]: "
 labels: enhancement
 assignees: ""

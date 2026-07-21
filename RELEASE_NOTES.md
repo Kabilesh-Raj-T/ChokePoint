@@ -1,8 +1,8 @@
-# ChokePoint 1.0.0 Project Notes
+# BlastRadius 1.0.0 Project Notes
 
 Release date: 2026-07-19
 
-ChokePoint 1.0.0 is a portfolio milestone for the infrastructure dependency
+BlastRadius 1.0.0 is a portfolio milestone for the infrastructure dependency
 graph analyzer. It provides a typed Python API and CLI for ingesting
 infrastructure descriptions, constructing dependency graphs, identifying choke
 points, and exporting reports for engineering review.

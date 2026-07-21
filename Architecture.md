@@ -1,6 +1,6 @@
 # Architecture
 
-ChokePoint follows clean architecture principles. Domain concepts live at the
+BlastRadius follows clean architecture principles. Domain concepts live at the
 center of the package, while input parsing, graph analysis, reporting, and
 command-line concerns remain isolated around that core.
 
@@ -49,7 +49,7 @@ replaceable without reshaping the domain model.
 
 ## Dependency Injection
 
-ChokePoint uses constructor or function-parameter injection for dependencies
+BlastRadius uses constructor or function-parameter injection for dependencies
 that cross architectural boundaries. Examples include filesystem access,
 configuration sources, clocks, serializers, graph backends, and output writers.
 Pure domain operations should remain independent from infrastructure details.

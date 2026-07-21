@@ -1,6 +1,6 @@
 # Code of Conduct
 
-ChokePoint follows the Contributor Covenant Code of Conduct, version 2.1.
+BlastRadius follows the Contributor Covenant Code of Conduct, version 2.1.
 
 ## Our Pledge
 

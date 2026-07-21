@@ -1,6 +1,6 @@
 # Support Policy
 
-ChokePoint is an open-source project maintained on a best-effort basis.
+BlastRadius is an open-source project maintained on a best-effort basis.
 
 ## Supported Channels
 
@@ -12,7 +12,7 @@ ChokePoint is an open-source project maintained on a best-effort basis.
 
 For bug reports, include:
 
-- ChokePoint version.
+- BlastRadius version.
 - Python version and operating system.
 - Minimal input file or topology that reproduces the issue.
 - CLI command or API call used.

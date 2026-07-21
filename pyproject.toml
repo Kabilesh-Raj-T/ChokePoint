@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "chokepoint"
 version = "1.0.0"
-description = "Python CLI for infrastructure dependency graphs and single-point-of-failure analysis."
+description = "Python CLI for infrastructure dependency graphs and blast-radius analysis."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 authors = [
-  { name = "ChokePoint Contributors" },
+  { name = "BlastRadius Contributors" },
 ]
 keywords = [
   "cli",
@@ -41,11 +41,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Kabilesh-Raj-T/ChokePoint"
-Documentation = "https://github.com/Kabilesh-Raj-T/ChokePoint/tree/main/docs"
-Repository = "https://github.com/Kabilesh-Raj-T/ChokePoint"
-Issues = "https://github.com/Kabilesh-Raj-T/ChokePoint/issues"
-Changelog = "https://github.com/Kabilesh-Raj-T/ChokePoint/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Kabilesh-Raj-T/BlastRadius"
+Documentation = "https://github.com/Kabilesh-Raj-T/BlastRadius/tree/main/docs"
+Repository = "https://github.com/Kabilesh-Raj-T/BlastRadius"
+Issues = "https://github.com/Kabilesh-Raj-T/BlastRadius/issues"
+Changelog = "https://github.com/Kabilesh-Raj-T/BlastRadius/blob/main/CHANGELOG.md"
 
 [project.scripts]
 chokepoint = "chokepoint.cli:main"

@@ -1,11 +1,13 @@
-# ChokePoint
+# BlastRadius
 
-ChokePoint is a Python CLI tool that builds infrastructure dependency graphs
+BlastRadius is a Python CLI tool that builds infrastructure dependency graphs
 and detects single points of failure using graph algorithms.
 
 It models services, databases, DNS providers, identity systems, cloud services,
-and external dependencies as a graph. ChokePoint then uses NetworkX analysis to
+and external dependencies as a graph. BlastRadius then uses NetworkX analysis to
 find articulation points, bridge edges, blast radius, and dependency paths.
+
+The Python package and CLI command remain `chokepoint` for 1.0.0 compatibility.
 
 ## Quick Demo
 
@@ -15,7 +17,7 @@ Run the analyzer against one of the included examples:
 uv run chokepoint analyze examples/basic.yaml --markdown
 ```
 
-![ChokePoint CLI demo](docs/assets/readme-demo.svg)
+![BlastRadius CLI demo](docs/assets/readme-demo.svg)
 
 The report shows:
 
@@ -43,7 +45,7 @@ The report shows:
 
 ## What This Project Demonstrates
 
-ChokePoint is designed as a portfolio-friendly infrastructure graph analyzer. It
+BlastRadius is designed as a portfolio-friendly infrastructure graph analyzer. It
 demonstrates:
 
 - Python 3.12+ project structure

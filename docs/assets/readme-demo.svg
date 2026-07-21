@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520" role="img" aria-label="ChokePoint CLI demo showing a dependency graph and single points of failure">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520" role="img" aria-label="BlastRadius CLI demo showing a dependency graph and single points of failure">
   <rect width="960" height="520" rx="12" fill="#0f172a"/>
   <rect x="28" y="28" width="904" height="464" rx="8" fill="#111827" stroke="#334155"/>
   <text x="52" y="68" fill="#93c5fd" font-family="Consolas, 'Courier New', monospace" font-size="18">uv run chokepoint analyze examples/basic.yaml --markdown</text>
-  <text x="52" y="116" fill="#f8fafc" font-family="Arial, sans-serif" font-size="26" font-weight="700">ChokePoint Security Report</text>
+  <text x="52" y="116" fill="#f8fafc" font-family="Arial, sans-serif" font-size="26" font-weight="700">BlastRadius Security Report</text>
   <text x="52" y="154" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="16">Risk score: 0/100 - 6 nodes - 3 dependency edges</text>
   <g font-family="Arial, sans-serif" font-size="14">
     <rect x="72" y="214" width="132" height="48" rx="6" fill="#e0f2fe" stroke="#0284c7"/>

@@ -1,4 +1,4 @@
-# ChokePoint Documentation
+# BlastRadius Documentation
 
 Project documentation lives here when it supports ongoing development or user
 guides. The initial architecture overview is maintained at the repository root

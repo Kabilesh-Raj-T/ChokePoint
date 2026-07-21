@@ -1,7 +1,7 @@
-# ChokePoint Examples
+# BlastRadius Examples
 
 Examples in this directory should be complete, reproducible demonstrations of
-supported ChokePoint workflows. Add example data and commands alongside the
+supported BlastRadius workflows. Add example data and commands alongside the
 feature that makes them executable.
 
 The YAML parser examples are:

@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for contributing to ChokePoint. This project values focused changes,
+Thank you for contributing to BlastRadius. This project values focused changes,
 clear boundaries, typed Python, and tests that describe the expected behavior.
 
 ## Local Setup
