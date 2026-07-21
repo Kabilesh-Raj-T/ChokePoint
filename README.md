@@ -9,24 +9,6 @@ find articulation points, bridge edges, blast radius, and dependency paths.
 
 The Python package and CLI command remain `chokepoint` for 1.0.0 compatibility.
 
-## Quick Demo
-
-Run the analyzer against one of the included examples:
-
-```bash
-uv run chokepoint analyze examples/basic.yaml --markdown
-```
-
-![BlastRadius CLI demo](docs/assets/readme-demo.svg)
-
-The report shows:
-
-- a Mermaid dependency graph
-- hidden single points of failure
-- confidence labels for findings
-- articulation points and bridge edges
-- blast radius and dependency chains
-
 ## How To Use BlastRadius
 
 BlastRadius works best as a local architecture-review tool. Give it a topology
