@@ -1,8 +1,8 @@
-"""Utility helpers for ChokePoint."""
+"""Utility helpers for BlastRadius."""
 
 from __future__ import annotations
 
-from chokepoint.utils.text import (
+from blastradius.utils.text import (
     escape_markdown_table,
     escape_mermaid_label,
     human_join,

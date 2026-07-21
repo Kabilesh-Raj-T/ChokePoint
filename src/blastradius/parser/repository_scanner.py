@@ -1,4 +1,4 @@
-"""Repository auto-discovery for supported ChokePoint inputs."""
+"""Repository auto-discovery for supported BlastRadius inputs."""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from chokepoint.models import Edge, Node, Topology
-from chokepoint.models.topology import Metadata
-from chokepoint.parser.docker_compose_parser import parse_docker_compose_file
-from chokepoint.parser.terraform_parser import parse_terraform_directory
-from chokepoint.parser.yaml_parser import parse_topology_yaml_file
+from blastradius.models import Edge, Node, Topology
+from blastradius.models.topology import Metadata
+from blastradius.parser.docker_compose_parser import parse_docker_compose_file
+from blastradius.parser.terraform_parser import parse_terraform_directory
+from blastradius.parser.yaml_parser import parse_topology_yaml_file
 
 type RepositoryArtifactKind = Literal[
     "topology_yaml",
@@ -29,8 +29,8 @@ COMPOSE_FILE_NAMES = {
     "docker-compose.yml",
 }
 TOPOLOGY_FILE_NAMES = {
-    "chokepoint.yaml",
-    "chokepoint.yml",
+    "blastradius.yaml",
+    "blastradius.yml",
     "topology.yaml",
     "topology.yml",
 }

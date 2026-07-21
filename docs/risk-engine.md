@@ -1,19 +1,19 @@
 # Risk Engine
 
-The ChokePoint risk engine consumes a `Topology` or a NetworkX graph produced
+The BlastRadius risk engine consumes a `Topology` or a NetworkX graph produced
 from a topology and emits a structured `RiskReport`.
 
 ## API
 
 ```python
-from chokepoint.report import RiskAnalyzer
+from blastradius.report import RiskAnalyzer
 
 report = RiskAnalyzer().analyze(topology)
 payload = report.export_json()
 ```
 
 Use `RiskAnalyzer().analyze_graph(graph)` when the caller already has a
-ChokePoint NetworkX graph.
+BlastRadius NetworkX graph.
 
 ## Rule Levels
 

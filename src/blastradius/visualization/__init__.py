@@ -1,4 +1,4 @@
-"""Visualization package for ChokePoint."""
+"""Visualization package for BlastRadius."""
 
 from __future__ import annotations
 

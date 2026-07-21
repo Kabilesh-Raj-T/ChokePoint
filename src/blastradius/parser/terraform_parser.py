@@ -1,4 +1,4 @@
-"""Terraform ingestion for ChokePoint."""
+"""Terraform ingestion for BlastRadius."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from typing import ClassVar, cast
 
 from hcl2.api import load as hcl2_load
 
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.models.topology import Metadata
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.models.topology import Metadata
 
 
 class TerraformParseError(ValueError):
@@ -215,7 +215,7 @@ TERRAFORM_RESOURCE_MAPPINGS: Mapping[str, TerraformResourceMapping] = MappingPro
 
 
 class TerraformParser:
-    """Parse Terraform HCL files into ChokePoint topologies."""
+    """Parse Terraform HCL files into BlastRadius topologies."""
 
     REFERENCE_PATTERN: ClassVar[re.Pattern[str]] = re.compile(
         r"\b(?P<type>[A-Za-z][A-Za-z0-9_]*)\.(?P<name>[A-Za-z_][A-Za-z0-9_-]*)\b"
@@ -527,7 +527,7 @@ class TerraformParser:
         return mapping.provider if mapping.provider in providers else mapping.provider
 
     def _node_from_resource(self, resource: TerraformResource) -> Node:
-        """Create a ChokePoint node from a Terraform resource."""
+        """Create a BlastRadius node from a Terraform resource."""
         metadata: Metadata = {
             "terraform_type": resource.resource_type,
             "terraform_name": resource.resource_name,

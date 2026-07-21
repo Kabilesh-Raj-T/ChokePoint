@@ -1,4 +1,4 @@
-"""Report generator tests for ChokePoint."""
+"""Report generator tests for BlastRadius."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ import json
 
 from rich.console import Console
 
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.report import GeneratedReport, generate_security_report
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.report import GeneratedReport, generate_security_report
 
 EXPECTED_DEPENDENCY_ROWS = 2
 EXPECTED_NODE_COUNT = 3
@@ -24,7 +24,7 @@ def test_generate_security_report_returns_structured_report() -> None:
     report = generate_security_report(topology)
 
     assert isinstance(report, GeneratedReport)
-    assert report.title == "ChokePoint Security Report"
+    assert report.title == "BlastRadius Security Report"
     assert report.risk_score == EXPECTED_RISK_SCORE
     assert report.critical_dependencies
     assert report.dependency_nodes[0].node_id == "aws-api"
@@ -47,7 +47,7 @@ def test_report_json_contains_nested_security_context() -> None:
 
     payload = json.loads(report.to_json())
 
-    assert payload["executive_summary"].startswith("ChokePoint analyzed")
+    assert payload["executive_summary"].startswith("BlastRadius analyzed")
     assert payload["risk_report"]["finding_count"] >= 1
     assert payload["graph_report"]["node_count"] == EXPECTED_NODE_COUNT
     assert payload["dependency_nodes"][0]["node_id"] == "aws-api"
@@ -65,7 +65,7 @@ def test_report_markdown_is_github_security_report_friendly() -> None:
 
     markdown = report.to_markdown()
 
-    assert markdown.startswith("# ChokePoint Security Report")
+    assert markdown.startswith("# BlastRadius Security Report")
     assert "## Executive Summary" in markdown
     assert "## Risk Score" in markdown
     assert "## Dependency Graph" in markdown
@@ -110,7 +110,7 @@ def test_terminal_report_renders_expected_sections() -> None:
     console.print(report.to_terminal())
 
     output = stream.getvalue()
-    assert "ChokePoint Security Report" in output
+    assert "BlastRadius Security Report" in output
     assert "Critical Dependencies" in output
     assert "Dependency Graph" in output
     assert "Hidden Single Points of Failure" in output

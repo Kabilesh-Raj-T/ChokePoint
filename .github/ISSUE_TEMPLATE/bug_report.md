@@ -13,7 +13,7 @@ What happened?
 ## Reproduction
 
 ```bash
-chokepoint ...
+blastradius ...
 ```
 
 ## Expected Behavior

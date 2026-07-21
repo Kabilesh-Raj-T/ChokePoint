@@ -1,11 +1,11 @@
-"""Unit tests for the ChokePoint topology data model."""
+"""Unit tests for the BlastRadius topology data model."""
 
 import json
 
 import pytest
 from pydantic import ValidationError
 
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
 
 
 def make_node(

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from chokepoint.models import NodeType
-from chokepoint.parser import (
+from blastradius.models import NodeType
+from blastradius.parser import (
     DockerComposeParseError,
     DockerComposeParser,
     parse_docker_compose_file,

@@ -1,4 +1,4 @@
-"""YAML topology parser for ChokePoint."""
+"""YAML topology parser for BlastRadius."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from typing import ClassVar, cast
 import yaml
 from pydantic import ValidationError
 
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.models.topology import JsonValue, Metadata
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.models.topology import JsonValue, Metadata
 
 
 class TopologyParseError(ValueError):
@@ -62,7 +62,7 @@ class ResourceSpec:
 
 
 class YamlTopologyParser:
-    """Parse ChokePoint YAML topology documents into `Topology` objects."""
+    """Parse BlastRadius YAML topology documents into `Topology` objects."""
 
     SECTIONS: ClassVar[dict[str, SectionSpec]] = {
         "clouds": SectionSpec(NodeType.EXTERNAL, "cloud", simple_provider_from_id=True),

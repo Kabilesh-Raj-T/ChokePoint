@@ -1,12 +1,12 @@
 """Reporting boundary for analysis outputs."""
 
-from chokepoint.report.export import (
+from blastradius.report.export import (
     ReportExporter,
     export_csv,
     export_mermaid,
     export_svg,
 )
-from chokepoint.report.generator import (
+from blastradius.report.generator import (
     DependencyGraphEdge,
     DependencyGraphNode,
     DependencyTableRow,
@@ -16,7 +16,7 @@ from chokepoint.report.generator import (
     TerminalReport,
     generate_security_report,
 )
-from chokepoint.report.risk import (
+from blastradius.report.risk import (
     ConfidenceLevel,
     DependencyChain,
     RiskAnalyzer,

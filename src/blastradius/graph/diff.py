@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-from chokepoint.models import Edge, Node, Relationship, Topology
+from blastradius.models import Edge, Node, Relationship, Topology
 
 
 class EdgeIdentity(BaseModel):

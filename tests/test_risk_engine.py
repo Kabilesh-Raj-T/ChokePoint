@@ -1,10 +1,10 @@
-"""Unit tests for the ChokePoint risk analysis engine."""
+"""Unit tests for the BlastRadius risk analysis engine."""
 
 import json
 
-from chokepoint.graph import GraphBuilder
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.report import (
+from blastradius.graph import GraphBuilder
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.report import (
     ConfidenceLevel,
     RiskAnalyzer,
     RiskCategory,

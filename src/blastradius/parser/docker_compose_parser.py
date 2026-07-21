@@ -1,4 +1,4 @@
-"""Docker Compose ingestion for ChokePoint."""
+"""Docker Compose ingestion for BlastRadius."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import cast
 
 import yaml
 
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
 
 COMPOSE_DEFAULT_PATTERN = re.compile(r"^\$\{[^}:]+(?::-|-)(?P<default>[^}]+)\}$")
 

@@ -1,4 +1,4 @@
-"""Risk analysis engine for ChokePoint topologies."""
+"""Risk analysis engine for BlastRadius topologies."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from typing import ClassVar
 import networkx as nx
 from pydantic import BaseModel, ConfigDict, Field
 
-from chokepoint.graph import GraphAnalyzer, GraphBuilder
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.utils.text import human_join
+from blastradius.graph import GraphAnalyzer, GraphBuilder
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.utils.text import human_join
 
 MIN_SHARED_DEPENDENTS = 2
 
@@ -59,7 +59,7 @@ class DependencyChain(BaseModel):
 
 
 class RiskFinding(BaseModel):
-    """One risk finding in a ChokePoint risk report."""
+    """One risk finding in a BlastRadius risk report."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -80,7 +80,7 @@ class RiskFinding(BaseModel):
 
 
 class RiskReport(BaseModel):
-    """Structured ChokePoint risk report."""
+    """Structured BlastRadius risk report."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -98,7 +98,7 @@ class RiskReport(BaseModel):
 
 
 class RiskAnalyzer:
-    """Analyze ChokePoint dependency risk from topologies or graphs."""
+    """Analyze BlastRadius dependency risk from topologies or graphs."""
 
     CATEGORY_LEVELS: ClassVar[Mapping[RiskCategory, RiskLevel]] = {
         RiskCategory.DNS: RiskLevel.CRITICAL,
@@ -134,17 +134,17 @@ class RiskAnalyzer:
         """Analyze a NetworkX graph produced from a topology.
 
         Args:
-            graph: NetworkX graph with ChokePoint model attributes.
+            graph: NetworkX graph with BlastRadius model attributes.
 
         Returns:
             Risk report.
 
         Raises:
-            ValueError: If the graph is not a valid ChokePoint graph.
+            ValueError: If the graph is not a valid BlastRadius graph.
         """
         validation = GraphAnalyzer().validate(graph)
         if not validation.is_valid:
-            message = "invalid ChokePoint graph: " + "; ".join(validation.issues)
+            message = "invalid BlastRadius graph: " + "; ".join(validation.issues)
             raise ValueError(message)
 
         articulation_points = tuple(sorted(nx.articulation_points(graph)))
@@ -366,22 +366,22 @@ class _DependencyIndex:
 
 
 def _topology_from_graph(graph: nx.Graph) -> Topology:
-    """Reconstruct a topology from a ChokePoint NetworkX graph."""
+    """Reconstruct a topology from a BlastRadius NetworkX graph."""
     topology = Topology()
     for _, attributes in graph.nodes(data=True):
         node = attributes[GraphBuilder.NODE_ATTR]
         if not isinstance(node, Node):
-            raise ValueError("graph contains a node without a ChokePoint Node model")
+            raise ValueError("graph contains a node without a BlastRadius Node model")
         topology.add_node(node)
 
     edge_keys: set[tuple[str, str, Relationship]] = set()
     for _, _, attributes in graph.edges(data=True):
         edges = attributes[GraphBuilder.EDGE_ATTR]
         if not isinstance(edges, tuple):
-            raise ValueError("graph contains an edge without ChokePoint Edge models")
+            raise ValueError("graph contains an edge without BlastRadius Edge models")
         for edge in edges:
             if not isinstance(edge, Edge):
-                raise ValueError("graph contains a non-ChokePoint edge model")
+                raise ValueError("graph contains a non-BlastRadius edge model")
             edge_key = (edge.source, edge.target, edge.relationship)
             if edge_key in edge_keys:
                 continue

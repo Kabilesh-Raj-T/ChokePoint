@@ -1,6 +1,6 @@
 # YAML Parser
 
-ChokePoint accepts YAML topology documents that describe nodes and dependency
+BlastRadius accepts YAML topology documents that describe nodes and dependency
 relationships. Parsing produces a validated `Topology`.
 
 ## Basic Shape
@@ -51,7 +51,7 @@ Each resource may define:
 - `name`
 - `provider`
 - `metadata`
-- Any relationship name from the ChokePoint model, such as `depends_on`,
+- Any relationship name from the BlastRadius model, such as `depends_on`,
   `reads_from`, `writes_to`, or `connects_to`
 
 Relationship fields must be lists of node ids. All dependency targets must be

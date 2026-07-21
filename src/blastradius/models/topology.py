@@ -1,4 +1,4 @@
-"""Core graph data model for ChokePoint."""
+"""Core graph data model for BlastRadius."""
 
 from __future__ import annotations
 

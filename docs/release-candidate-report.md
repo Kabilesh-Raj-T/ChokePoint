@@ -7,7 +7,7 @@ Review date: 2026-07-20
 
 Score: 98/100
 
-ChokePoint is ready for a public release candidate. The package installs from a
+BlastRadius is ready for a public release candidate. The package installs from a
 clean environment, the CLI entry points are configured, strict quality gates are
 active, coverage is above the release threshold, and CI covers the supported
 Python and operating system matrix.
@@ -36,12 +36,12 @@ Python and operating system matrix.
 - Architecture: Layered `src/` layout separates CLI, parsers, graph engine,
   models, reports, visualization/export, and utilities.
 - Packaging: `pyproject.toml` uses Hatchling, package discovery points to
-  `src/chokepoint`, and the project includes a `py.typed` marker.
+  `src/blastradius`, and the project includes a `py.typed` marker.
 - Public API: The module imports cleanly and exposes the package version.
 - Public report API: Structured reports expose dependency graph nodes and edges
   so Markdown, JSON, and terminal outputs can represent complete topologies.
-- CLI: `chokepoint` is configured as a console script and `python -m
-  chokepoint` delegates to the CLI.
+- CLI: `blastradius` is configured as a console script and `python -m
+  blastradius` delegates to the CLI.
 - Testing: Unit and integration tests cover imports, parsers, graph analysis,
   risk reports, exports, examples, repository scanning, CLI behavior, and
   complete report graph rendering.
@@ -57,7 +57,7 @@ Python and operating system matrix.
 
 - Publishing is intentionally manual: maintainers must attach or publish the
   built distributions after the release workflow finishes.
-- ChokePoint's inferred dependency findings should still be reviewed by service
+- BlastRadius's inferred dependency findings should still be reviewed by service
   owners before being treated as operational truth.
 - Future parser expansion should include targeted fixtures before broadening the
   documented support surface.

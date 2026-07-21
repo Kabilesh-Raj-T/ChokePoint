@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "chokepoint"
+name = "blastradius"
 version = "1.0.0"
 description = "Python CLI for infrastructure dependency graphs and blast-radius analysis."
 readme = "README.md"
@@ -48,7 +48,7 @@ Issues = "https://github.com/Kabilesh-Raj-T/BlastRadius/issues"
 Changelog = "https://github.com/Kabilesh-Raj-T/BlastRadius/blob/main/CHANGELOG.md"
 
 [project.scripts]
-chokepoint = "chokepoint.cli:main"
+blastradius = "blastradius.cli:main"
 
 [dependency-groups]
 dev = [
@@ -61,7 +61,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/chokepoint"]
+packages = ["src/blastradius"]
 
 [tool.uv]
 package = true
@@ -105,7 +105,7 @@ convention = "google"
 python_version = "3.12"
 strict = true
 mypy_path = "src"
-files = ["src/chokepoint", "scripts"]
+files = ["src/blastradius", "scripts"]
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
@@ -114,6 +114,6 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra --strict-config --strict-markers --cov=chokepoint --cov-report=term-missing --cov-fail-under=95"
+addopts = "-ra --strict-config --strict-markers --cov=blastradius --cov-report=term-missing --cov-fail-under=95"
 pythonpath = ["src"]
 testpaths = ["tests"]

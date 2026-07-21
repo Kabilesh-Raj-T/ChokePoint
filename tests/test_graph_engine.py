@@ -1,10 +1,10 @@
-"""Unit tests for the ChokePoint graph engine."""
+"""Unit tests for the BlastRadius graph engine."""
 
 import networkx as nx
 import pytest
 
-from chokepoint.graph import GraphAnalyzer, GraphBuilder
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.graph import GraphAnalyzer, GraphBuilder
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
 
 
 def node(node_id: str, node_type: NodeType = NodeType.SERVICE) -> Node:
@@ -149,7 +149,7 @@ def test_analyze_rejects_invalid_graph() -> None:
     graph = nx.Graph()
     graph.add_node("api")
 
-    with pytest.raises(ValueError, match="invalid ChokePoint graph"):
+    with pytest.raises(ValueError, match="invalid BlastRadius graph"):
         GraphAnalyzer().analyze(graph)
 
 

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from chokepoint.models import NodeType, Relationship, Topology
-from chokepoint.parser import (
+from blastradius.models import NodeType, Relationship, Topology
+from blastradius.parser import (
     TERRAFORM_RESOURCE_MAPPINGS,
     TerraformParseError,
     TerraformParser,
@@ -15,7 +15,7 @@ from chokepoint.parser import (
     parse_terraform_files,
     parse_terraform_text,
 )
-from chokepoint.report import RiskAnalyzer, RiskCategory, RiskLevel
+from blastradius.report import RiskAnalyzer, RiskCategory, RiskLevel
 
 TERRAFORM_EXAMPLE = """
 provider "aws" {

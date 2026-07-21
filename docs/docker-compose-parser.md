@@ -1,11 +1,11 @@
 # Docker Compose Parser
 
-ChokePoint can parse basic Docker Compose YAML into a topology.
+BlastRadius can parse basic Docker Compose YAML into a topology.
 
 ## API
 
 ```python
-from chokepoint.parser import DockerComposeParser
+from blastradius.parser import DockerComposeParser
 
 topology = DockerComposeParser().parse_file("docker-compose.yml")
 ```

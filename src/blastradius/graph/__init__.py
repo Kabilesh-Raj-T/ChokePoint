@@ -1,12 +1,12 @@
 """Graph construction and analysis boundary."""
 
-from chokepoint.graph.diff import (
+from blastradius.graph.diff import (
     EdgeIdentity,
     TopologyDiff,
     TopologyDiffer,
     diff_topologies,
 )
-from chokepoint.graph.engine import (
+from blastradius.graph.engine import (
     AlgorithmComplexity,
     AnalysisReport,
     GraphAnalyzer,

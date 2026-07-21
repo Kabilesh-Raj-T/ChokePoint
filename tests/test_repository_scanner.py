@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from chokepoint.parser import RepositoryScanner, scan_repository
+from blastradius.parser import RepositoryScanner, scan_repository
 
 MINIMUM_MERGED_NODES = 6
 

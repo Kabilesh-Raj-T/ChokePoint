@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from chokepoint.models import NodeType, Relationship
-from chokepoint.parser import (
+from blastradius.models import NodeType, Relationship
+from blastradius.parser import (
     TopologyParseError,
     YamlTopologyParser,
     parse_topology_yaml_file,

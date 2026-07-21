@@ -44,4 +44,4 @@ uv run python scripts/smoke_install.py --wheel --sdist
 Coverage is enforced at 95% or higher. CI runs on Ubuntu, Windows, and macOS
 for Python 3.12 and 3.13, then smoke-installs editable, wheel, and sdist
 artifacts before validating an example topology through the installed
-`chokepoint` command.
+`blastradius` command.

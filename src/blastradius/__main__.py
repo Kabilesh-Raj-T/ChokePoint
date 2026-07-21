@@ -1,8 +1,8 @@
-"""Module entry point for ChokePoint."""
+"""Module entry point for BlastRadius."""
 
 from __future__ import annotations
 
-from chokepoint.cli import main
+from blastradius.cli import main
 
 if __name__ == "__main__":
     main()

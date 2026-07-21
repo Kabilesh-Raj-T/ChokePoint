@@ -7,8 +7,8 @@ import html
 import io
 from dataclasses import dataclass
 
-from chokepoint.models import Edge, Node, Topology
-from chokepoint.utils.text import escape_mermaid_label, mermaid_node_id
+from blastradius.models import Edge, Node, Topology
+from blastradius.utils.text import escape_mermaid_label, mermaid_node_id
 
 SVG_COLUMNS = 3
 SVG_NODE_WIDTH = 180
@@ -32,7 +32,7 @@ class SvgCanvas:
 
 
 class ReportExporter:
-    """Export ChokePoint data to integration-friendly formats."""
+    """Export BlastRadius data to integration-friendly formats."""
 
     def csv(self, topology: Topology) -> str:
         """Export topology dependency edges as CSV."""
@@ -97,7 +97,7 @@ class ReportExporter:
                 f'<svg xmlns="http://www.w3.org/2000/svg" width="{canvas.width}" '
                 f'height="{canvas.height}" '
                 f'viewBox="0 0 {canvas.width} {canvas.height}" '
-                'role="img" aria-label="ChokePoint dependency graph">'
+                'role="img" aria-label="BlastRadius dependency graph">'
             ),
             *_svg_defs(),
             '<rect width="100%" height="100%" fill="#ffffff"/>',

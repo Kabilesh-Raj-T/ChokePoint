@@ -1,4 +1,4 @@
-"""Smoke-test ChokePoint installation modes in isolated virtual environments."""
+"""Smoke-test BlastRadius installation modes in isolated virtual environments."""
 
 from __future__ import annotations
 
@@ -11,15 +11,20 @@ from pathlib import Path
 
 
 def main() -> None:
-    """Install ChokePoint and verify package entry points."""
+    """Install BlastRadius and verify package entry points."""
     args = _parse_args()
     root = Path.cwd()
     if args.editable:
         _smoke_install(root, ["-e", str(root)])
     if args.wheel:
-        _smoke_install(root, [str(_single_artifact(root / "dist", "*.whl"))])
+        _smoke_install(
+            root, [str(_single_artifact(root / "dist", "blastradius-*.whl"))]
+        )
     if args.sdist:
-        _smoke_install(root, [str(_single_artifact(root / "dist", "*.tar.gz"))])
+        _smoke_install(
+            root,
+            [str(_single_artifact(root / "dist", "blastradius-*.tar.gz"))],
+        )
 
 
 def _parse_args() -> argparse.Namespace:
@@ -39,11 +44,11 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _smoke_install(root: Path, install_args: list[str]) -> None:
-    """Install ChokePoint into a temp venv and verify entry points."""
-    with tempfile.TemporaryDirectory(prefix="chokepoint-install-smoke-") as temp_dir:
+    """Install BlastRadius into a temp venv and verify entry points."""
+    with tempfile.TemporaryDirectory(prefix="blastradius-install-smoke-") as temp_dir:
         venv = Path(temp_dir) / ".venv"
         python = _venv_python(venv)
-        console_script = _venv_script(venv, "chokepoint")
+        console_script = _venv_script(venv, "blastradius")
 
         subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
         subprocess.run(
@@ -55,7 +60,7 @@ def _smoke_install(root: Path, install_args: list[str]) -> None:
             [
                 str(python),
                 "-m",
-                "chokepoint",
+                "blastradius",
                 "validate",
                 "examples/basic.yaml",
             ],

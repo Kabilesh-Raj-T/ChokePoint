@@ -1,11 +1,11 @@
 # Repository Scanner
 
-`chokepoint scan` is the best command for trying ChokePoint on an arbitrary
+`blastradius scan` is the best command for trying BlastRadius on an arbitrary
 repository.
 
 ```bash
-uv run chokepoint scan /path/to/repo --markdown
-uv run chokepoint scan /path/to/repo --json
+uv run blastradius scan /path/to/repo --markdown
+uv run blastradius scan /path/to/repo --json
 ```
 
 The scanner discovers supported files, parses what it can, and records
@@ -13,7 +13,7 @@ non-fatal issues for files it cannot parse.
 
 ## Supported Discovery
 
-- ChokePoint topology files such as `topology.yaml`, `topology.yml`, and
+- BlastRadius topology files such as `topology.yaml`, `topology.yml`, and
   `topology-*.yaml`.
 - Terraform directories containing `.tf` files.
 - Docker Compose files such as `compose.yaml`, `docker-compose.yml`, and

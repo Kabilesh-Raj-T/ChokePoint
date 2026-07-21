@@ -1,4 +1,4 @@
-"""Import tests for the ChokePoint package structure."""
+"""Import tests for the BlastRadius package structure."""
 
 import importlib
 from collections.abc import Iterable
@@ -7,15 +7,15 @@ from collections.abc import Iterable
 def test_package_modules_are_importable() -> None:
     """Verify that each public package boundary can be imported."""
     module_names: Iterable[str] = (
-        "chokepoint",
-        "chokepoint.__main__",
-        "chokepoint.cli",
-        "chokepoint.graph",
-        "chokepoint.models",
-        "chokepoint.parser",
-        "chokepoint.report",
-        "chokepoint.utils",
-        "chokepoint.visualization",
+        "blastradius",
+        "blastradius.__main__",
+        "blastradius.cli",
+        "blastradius.graph",
+        "blastradius.models",
+        "blastradius.parser",
+        "blastradius.report",
+        "blastradius.utils",
+        "blastradius.visualization",
     )
 
     for module_name in module_names:

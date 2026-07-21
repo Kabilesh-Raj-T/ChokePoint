@@ -7,8 +7,6 @@ It models services, databases, DNS providers, identity systems, cloud services,
 and external dependencies as a graph. BlastRadius then uses NetworkX analysis to
 find articulation points, bridge edges, blast radius, and dependency paths.
 
-The Python package and CLI command remain `chokepoint` for 1.0.0 compatibility.
-
 ## How To Use BlastRadius
 
 BlastRadius works best as a local architecture-review tool. Give it a topology
@@ -26,11 +24,8 @@ uv sync
 Then run commands through `uv`:
 
 ```bash
-uv run chokepoint --help
+uv run blastradius --help
 ```
-
-The project is branded as BlastRadius, but the Python package and CLI command
-remain `chokepoint` for the 1.0.0 release.
 
 ### 2. Create a topology file
 
@@ -69,7 +64,7 @@ Okta, and `database` depends on AWS.
 ### 3. Validate the input
 
 ```bash
-uv run chokepoint validate topology.yaml
+uv run blastradius validate topology.yaml
 ```
 
 Expected result:
@@ -84,19 +79,19 @@ location whenever possible.
 ### 4. Analyze dependency risk
 
 ```bash
-uv run chokepoint analyze topology.yaml
+uv run blastradius analyze topology.yaml
 ```
 
 Use Markdown when you want a GitHub-friendly report:
 
 ```bash
-uv run chokepoint analyze topology.yaml --markdown
+uv run blastradius analyze topology.yaml --markdown
 ```
 
 Use JSON when another tool needs to consume the result:
 
 ```bash
-uv run chokepoint analyze topology.yaml --json
+uv run blastradius analyze topology.yaml --json
 ```
 
 The report can include:
@@ -114,16 +109,16 @@ The report can include:
 Get graph metrics:
 
 ```bash
-uv run chokepoint graph topology.yaml
-uv run chokepoint graph topology.yaml --json
+uv run blastradius graph topology.yaml
+uv run blastradius graph topology.yaml --json
 ```
 
 Export graph/report artifacts:
 
 ```bash
-uv run chokepoint export topology.yaml --format mermaid
-uv run chokepoint export topology.yaml --format svg > dependency-graph.svg
-uv run chokepoint export topology.yaml --format csv > dependencies.csv
+uv run blastradius export topology.yaml --format mermaid
+uv run blastradius export topology.yaml --format svg > dependency-graph.svg
+uv run blastradius export topology.yaml --format csv > dependencies.csv
 ```
 
 ### 6. Scan an existing repository
@@ -132,7 +127,7 @@ BlastRadius can scan a repository for supported files such as topology YAML,
 Terraform, and Docker Compose:
 
 ```bash
-uv run chokepoint scan /path/to/repo --markdown
+uv run blastradius scan /path/to/repo --markdown
 ```
 
 Repository scanning is best-effort. For real systems, add a YAML topology file
@@ -220,13 +215,13 @@ Use `uv run ...` for commands that must work from a completely clean shell. The
 project uses a `src/` layout and relies on uv to create the Python 3.12+
 environment and install test dependencies before collection.
 
-If you prefer plain commands such as `pytest -q` or `chokepoint analyze ...`,
+If you prefer plain commands such as `pytest -q` or `blastradius analyze ...`,
 activate the uv virtual environment first:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 pytest -q
-chokepoint analyze examples/topology-basic.yaml
+blastradius analyze examples/topology-basic.yaml
 ```
 
 Install local hooks:
@@ -240,14 +235,14 @@ uv run pre-commit install
 Common commands:
 
 ```bash
-uv run chokepoint analyze examples/basic.yaml
-uv run chokepoint graph examples/basic.yaml --json
-uv run chokepoint report examples/basic.yaml --markdown
-uv run chokepoint validate examples/basic.yaml
-uv run chokepoint export examples/basic.yaml --format mermaid
-uv run chokepoint export examples/basic.yaml --format svg
-uv run chokepoint diff examples/topology-basic.yaml examples/topology-expanded.yaml --json
-uv run chokepoint scan /path/to/repo --markdown
+uv run blastradius analyze examples/basic.yaml
+uv run blastradius graph examples/basic.yaml --json
+uv run blastradius report examples/basic.yaml --markdown
+uv run blastradius validate examples/basic.yaml
+uv run blastradius export examples/basic.yaml --format mermaid
+uv run blastradius export examples/basic.yaml --format svg
+uv run blastradius diff examples/topology-basic.yaml examples/topology-expanded.yaml --json
+uv run blastradius scan /path/to/repo --markdown
 ```
 
 `analyze` and `report` explain the topology in terms of a visual dependency
@@ -257,7 +252,7 @@ dependency matters.
 Use `--verbose` before the command for colored diagnostic logs:
 
 ```bash
-uv run chokepoint --verbose validate examples/topology-basic.yaml
+uv run blastradius --verbose validate examples/topology-basic.yaml
 ```
 
 ## Architecture

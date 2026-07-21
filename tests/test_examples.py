@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from chokepoint.cli import cli
-from chokepoint.parser import parse_topology_yaml_file
+from blastradius.cli import cli
+from blastradius.parser import parse_topology_yaml_file
 
 EXAMPLE_PATHS = tuple(sorted(Path("examples").glob("topology-*.yaml")))
 
@@ -23,9 +23,9 @@ def test_example_topology_parses(path: Path) -> None:
     "arguments, expected_output",
     (
         (("validate", "{path}", "--json"), '"valid": true'),
-        (("analyze", "{path}", "--json"), '"title": "ChokePoint Security Report"'),
+        (("analyze", "{path}", "--json"), '"title": "BlastRadius Security Report"'),
         (("graph", "{path}", "--json"), '"node_count"'),
-        (("report", "{path}", "--markdown"), "# ChokePoint Security Report"),
+        (("report", "{path}", "--markdown"), "# BlastRadius Security Report"),
     ),
 )
 def test_example_topology_cli_commands(

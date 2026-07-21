@@ -1,19 +1,19 @@
 # Exports
 
-ChokePoint exports topology and report data for local review and documentation.
+BlastRadius exports topology and report data for local review and documentation.
 
 ## CLI
 
 ```bash
-chokepoint export topology.yaml --format csv
-chokepoint export topology.yaml --format mermaid
-chokepoint export topology.yaml --format svg
+blastradius export topology.yaml --format csv
+blastradius export topology.yaml --format mermaid
+blastradius export topology.yaml --format svg
 ```
 
 ## API
 
 ```python
-from chokepoint.report import export_csv, export_mermaid, export_svg
+from blastradius.report import export_csv, export_mermaid, export_svg
 
 csv_payload = export_csv(topology)
 mermaid_payload = export_mermaid(topology)
@@ -28,11 +28,11 @@ GitHub can display in issues, pull requests, and project notes.
 Topology diffs are available through the graph API and CLI:
 
 ```bash
-chokepoint diff before.yaml after.yaml --json
+blastradius diff before.yaml after.yaml --json
 ```
 
 ```python
-from chokepoint.graph import diff_topologies
+from blastradius.graph import diff_topologies
 
 diff = diff_topologies(before, after)
 ```

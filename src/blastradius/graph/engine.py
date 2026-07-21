@@ -1,4 +1,4 @@
-"""NetworkX graph construction and analysis for ChokePoint."""
+"""NetworkX graph construction and analysis for BlastRadius."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from typing import ClassVar, TypeGuard
 import networkx as nx
 from pydantic import BaseModel, ConfigDict, Field
 
-from chokepoint.models import Edge, Node, Relationship, Topology
-from chokepoint.models.topology import Metadata
+from blastradius.models import Edge, Node, Relationship, Topology
+from blastradius.models.topology import Metadata
 
 
 class GraphValidationReport(BaseModel):
-    """Validation result for a NetworkX graph produced by ChokePoint."""
+    """Validation result for a NetworkX graph produced by BlastRadius."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -50,7 +50,7 @@ class AnalysisReport(BaseModel):
 
 
 class GraphBuilder:
-    """Build undirected NetworkX graphs from ChokePoint topologies."""
+    """Build undirected NetworkX graphs from BlastRadius topologies."""
 
     NODE_ATTR: ClassVar[str] = "node"
     EDGE_ATTR: ClassVar[str] = "topology_edges"
@@ -64,7 +64,7 @@ class GraphBuilder:
             topology: Validated topology to convert.
 
         Returns:
-            Undirected NetworkX graph with ChokePoint model attributes.
+            Undirected NetworkX graph with BlastRadius model attributes.
 
         Raises:
             ValueError: If the topology has invalid in-place mutations.
@@ -72,7 +72,7 @@ class GraphBuilder:
         validated_topology = Topology.model_validate(topology.model_dump())
 
         graph = nx.Graph()
-        graph.graph["source"] = "chokepoint.topology"
+        graph.graph["source"] = "blastradius.topology"
 
         for node in validated_topology.nodes.values():
             graph.add_node(
@@ -116,7 +116,7 @@ class GraphBuilder:
 
 
 class GraphAnalyzer:
-    """Analyze ChokePoint NetworkX dependency graphs."""
+    """Analyze BlastRadius NetworkX dependency graphs."""
 
     _COMPLEXITY_PROFILE: ClassVar[tuple[AlgorithmComplexity, ...]] = (
         AlgorithmComplexity(
@@ -170,7 +170,7 @@ class GraphAnalyzer:
     )
 
     def analyze(self, graph: nx.Graph) -> AnalysisReport:
-        """Analyze a validated ChokePoint graph.
+        """Analyze a validated BlastRadius graph.
 
         Args:
             graph: NetworkX graph produced by `GraphBuilder`.
@@ -183,7 +183,7 @@ class GraphAnalyzer:
         """
         validation = self.validate(graph)
         if not validation.is_valid:
-            message = "invalid ChokePoint graph: " + "; ".join(validation.issues)
+            message = "invalid BlastRadius graph: " + "; ".join(validation.issues)
             raise ValueError(message)
 
         connected_components = _connected_components(graph)
@@ -205,7 +205,7 @@ class GraphAnalyzer:
         )
 
     def validate(self, graph: nx.Graph) -> GraphValidationReport:
-        """Validate that a NetworkX graph matches ChokePoint expectations.
+        """Validate that a NetworkX graph matches BlastRadius expectations.
 
         Args:
             graph: Graph to validate.
@@ -234,7 +234,7 @@ class GraphAnalyzer:
         return self._COMPLEXITY_PROFILE
 
     def _validate_nodes(self, graph: nx.Graph, issues: list[str]) -> None:
-        """Validate ChokePoint node attributes."""
+        """Validate BlastRadius node attributes."""
         for node_id, attributes in graph.nodes(data=True):
             if not isinstance(node_id, str) or not node_id:
                 issues.append(f"node id must be a non-empty string: {node_id!r}")
@@ -251,7 +251,7 @@ class GraphAnalyzer:
                 )
 
     def _validate_edges(self, graph: nx.Graph, issues: list[str]) -> None:
-        """Validate ChokePoint edge attributes."""
+        """Validate BlastRadius edge attributes."""
         for source, target, attributes in graph.edges(data=True):
             if source == target:
                 issues.append(f"self-loop edge is not supported: {source!r}")

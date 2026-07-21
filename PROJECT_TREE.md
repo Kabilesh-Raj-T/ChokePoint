@@ -48,7 +48,7 @@
 |   `-- topology-multi-cloud.yaml
 |-- pyproject.toml
 |-- src/
-|   `-- chokepoint/
+|   `-- blastradius/
 |       |-- __init__.py
 |       |-- __main__.py
 |       |-- cli/

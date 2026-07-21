@@ -1,4 +1,4 @@
-"""Text formatting helpers shared across ChokePoint modules."""
+"""Text formatting helpers shared across BlastRadius modules."""
 
 from __future__ import annotations
 

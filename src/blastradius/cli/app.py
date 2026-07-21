@@ -1,4 +1,4 @@
-"""Click command-line interface for ChokePoint."""
+"""Click command-line interface for BlastRadius."""
 
 from __future__ import annotations
 
@@ -14,16 +14,16 @@ from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from chokepoint.graph import GraphAnalyzer, GraphBuilder, TopologyDiff, diff_topologies
-from chokepoint.graph.engine import AnalysisReport
-from chokepoint.models import Topology
-from chokepoint.parser import (
+from blastradius.graph import GraphAnalyzer, GraphBuilder, TopologyDiff, diff_topologies
+from blastradius.graph.engine import AnalysisReport
+from blastradius.models import Topology
+from blastradius.parser import (
     RepositoryScanResult,
     TopologyParseError,
     parse_topology_yaml_file,
     scan_repository,
 )
-from chokepoint.report import (
+from blastradius.report import (
     GeneratedReport,
     export_csv,
     export_mermaid,
@@ -31,7 +31,7 @@ from chokepoint.report import (
     generate_security_report,
 )
 
-LOGGER = logging.getLogger("chokepoint")
+LOGGER = logging.getLogger("blastradius")
 console = Console()
 error_console = Console(stderr=True)
 
@@ -281,7 +281,7 @@ def scan(
 
 
 def main() -> None:
-    """Run the ChokePoint CLI."""
+    """Run the BlastRadius CLI."""
     cli()
 
 
@@ -423,7 +423,7 @@ def _scan_json(scan_result: RepositoryScanResult, report: GeneratedReport) -> st
 def _scan_markdown(scan_result: RepositoryScanResult, report: GeneratedReport) -> str:
     """Return repository scan Markdown."""
     lines = [
-        "# ChokePoint Repository Scan",
+        "# BlastRadius Repository Scan",
         "",
         f"- Root: `{scan_result.root}`",
         f"- Parsed artifacts: `{len(scan_result.artifacts)}`",
@@ -474,7 +474,7 @@ def _graph_markdown(analysis: AnalysisReport) -> str:
     """Return a Markdown graph summary."""
     return "\n".join(
         [
-            "# ChokePoint Graph Summary",
+            "# BlastRadius Graph Summary",
             "",
             f"- Nodes: `{analysis.node_count}`",
             f"- Edges: `{analysis.edge_count}`",
@@ -490,7 +490,7 @@ def _diff_markdown(diff: TopologyDiff) -> str:
     """Return a Markdown topology diff summary."""
     return "\n".join(
         [
-            "# ChokePoint Topology Diff",
+            "# BlastRadius Topology Diff",
             "",
             f"- Added nodes: `{len(diff.added_nodes)}`",
             f"- Removed nodes: `{len(diff.removed_nodes)}`",

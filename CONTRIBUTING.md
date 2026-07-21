@@ -26,13 +26,13 @@ If test collection fails with missing imports, verify that the command is being
 run through uv from the repository root. Running a globally installed `pytest`
 without first installing the project dependencies is not a supported check.
 
-Plain commands such as `pytest -q` or `chokepoint analyze ...` are fine after
+Plain commands such as `pytest -q` or `blastradius analyze ...` are fine after
 activating the project virtual environment:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 pytest -q
-chokepoint analyze examples/topology-basic.yaml
+blastradius analyze examples/topology-basic.yaml
 ```
 
 ## Code Style

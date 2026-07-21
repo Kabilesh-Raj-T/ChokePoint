@@ -1,13 +1,13 @@
 # Terraform Parser
 
-ChokePoint ingests Terraform HCL through `python-hcl2` and converts supported
+BlastRadius ingests Terraform HCL through `python-hcl2` and converts supported
 `resource` blocks into `Topology` nodes. This parser does not perform graph
 analysis.
 
 ## API
 
 ```python
-from chokepoint.parser import parse_terraform_directory
+from blastradius.parser import parse_terraform_directory
 
 topology = parse_terraform_directory("infra")
 ```

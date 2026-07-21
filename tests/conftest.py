@@ -1,4 +1,4 @@
-"""Pytest environment checks for ChokePoint."""
+"""Pytest environment checks for BlastRadius."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def pytest_configure(config: pytest.Config) -> None:
     if problems:
         details = "\n".join(f"- {problem}" for problem in problems)
         pytest.exit(
-            "ChokePoint tests are running outside the project environment.\n"
+            "BlastRadius tests are running outside the project environment.\n"
             f"{details}\n\n"
             "Run the supported test command from the repository root:\n"
             "  uv sync\n"

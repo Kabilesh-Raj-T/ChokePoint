@@ -1,12 +1,12 @@
-"""CLI integration tests for ChokePoint."""
+"""CLI integration tests for BlastRadius."""
 
 import json
 from pathlib import Path
 
 from click.testing import CliRunner
 
-import chokepoint.cli.app as cli_app
-from chokepoint.cli import cli
+import blastradius.cli.app as cli_app
+from blastradius.cli import cli
 
 EXPECTED_GRAPH_NODES = 5
 EXPECTED_GRAPH_EDGES = 2
@@ -71,7 +71,7 @@ def test_analyze_json_outputs_risk_report(tmp_path: Path) -> None:
 
     payload = json.loads(result.output)
     assert result.exit_code == 0
-    assert payload["title"] == "ChokePoint Security Report"
+    assert payload["title"] == "BlastRadius Security Report"
     assert payload["risk_report"]["finding_count"] >= 1
     assert {finding["category"] for finding in payload["risk_report"]["findings"]} >= {
         "dns"
@@ -90,7 +90,7 @@ def test_report_markdown_outputs_heading(tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, ["report", str(path), "--markdown"])
 
     assert result.exit_code == 0
-    assert "ChokePoint Security Report" in result.output
+    assert "BlastRadius Security Report" in result.output
     assert "## Executive Summary" in result.output
     assert "## Dependency Graph" in result.output
     assert "```mermaid" in result.output
@@ -117,7 +117,7 @@ def test_graph_markdown_outputs_summary(tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, ["graph", str(path), "--markdown"])
 
     assert result.exit_code == 0
-    assert "ChokePoint Graph Summary" in result.output
+    assert "BlastRadius Graph Summary" in result.output
 
 
 def test_graph_default_outputs_table(tmp_path: Path) -> None:
@@ -157,7 +157,7 @@ def test_export_svg_outputs_graph(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert result.output.startswith('<?xml version="1.0" encoding="UTF-8"?>')
     assert "<svg" in result.output
-    assert "ChokePoint dependency graph" in result.output
+    assert "BlastRadius dependency graph" in result.output
     assert "cloudflare" in result.output
 
 
@@ -256,7 +256,7 @@ identity:
     result = CliRunner().invoke(cli, ["diff", str(before), str(after)])
 
     assert result.exit_code == 0
-    assert "ChokePoint Topology Diff" in result.output
+    assert "BlastRadius Topology Diff" in result.output
     assert "Added nodes" in result.output
 
 
@@ -324,7 +324,7 @@ def test_scan_json_outputs_repository_report(tmp_path: Path) -> None:
     assert payload["artifact_count"] == EXPECTED_SCAN_ARTIFACTS
     assert payload["issue_count"] == 0
     assert payload["nodes"] >= MINIMUM_SCAN_NODES
-    assert payload["report"]["title"] == "ChokePoint Security Report"
+    assert payload["report"]["title"] == "BlastRadius Security Report"
     assert {artifact["kind"] for artifact in payload["artifacts"]} == {
         "docker_compose",
         "terraform",
@@ -337,9 +337,9 @@ def test_scan_markdown_outputs_repository_summary(tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, ["scan", str(tmp_path), "--markdown"])
 
     assert result.exit_code == 0
-    assert "# ChokePoint Repository Scan" in result.output
+    assert "# BlastRadius Repository Scan" in result.output
     assert "## Parsed Artifacts" in result.output
-    assert "# ChokePoint Security Report" in result.output
+    assert "# BlastRadius Security Report" in result.output
 
 
 def test_scan_terminal_outputs_summary_for_empty_repo(tmp_path: Path) -> None:

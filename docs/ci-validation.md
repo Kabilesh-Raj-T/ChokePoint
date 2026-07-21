@@ -25,11 +25,11 @@ Python 3.12.
   Python smoke-test script.
 - Added editable-install validation with `pip install -e .`.
 - Added wheel and sdist install validation.
-- Verified both `python -m chokepoint` and the `chokepoint` console script.
+- Verified both `python -m blastradius` and the `blastradius` console script.
 - Updated pre-commit to use local `uv run` hooks so mypy sees the same project
   dependencies as CI.
 - Included `scripts/` in Black, Ruff, and mypy validation.
-- Fixed `src/chokepoint/py.typed` end-of-file hygiene.
+- Fixed `src/blastradius/py.typed` end-of-file hygiene.
 - Ignored `.wheel-smoke/` local smoke-test leftovers.
 
 ## Local Validation
@@ -56,8 +56,8 @@ verifies:
 - editable install
 - wheel install
 - sdist install
-- `python -m chokepoint validate examples/basic.yaml`
-- `chokepoint --help`
+- `python -m blastradius validate examples/basic.yaml`
+- `blastradius --help`
 
 ## Release Workflow
 

@@ -1,19 +1,19 @@
 """Parsing boundary for infrastructure dependency inputs."""
 
-from chokepoint.parser.docker_compose_parser import (
+from blastradius.parser.docker_compose_parser import (
     DockerComposeParseError,
     DockerComposeParser,
     parse_docker_compose_file,
     parse_docker_compose_text,
 )
-from chokepoint.parser.repository_scanner import (
+from blastradius.parser.repository_scanner import (
     RepositoryArtifact,
     RepositoryScanIssue,
     RepositoryScanner,
     RepositoryScanResult,
     scan_repository,
 )
-from chokepoint.parser.terraform_parser import (
+from blastradius.parser.terraform_parser import (
     TERRAFORM_RESOURCE_MAPPINGS,
     TerraformParseError,
     TerraformParser,
@@ -23,7 +23,7 @@ from chokepoint.parser.terraform_parser import (
     parse_terraform_files,
     parse_terraform_text,
 )
-from chokepoint.parser.yaml_parser import (
+from blastradius.parser.yaml_parser import (
     TopologyParseError,
     YamlTopologyParser,
     parse_topology_yaml_file,

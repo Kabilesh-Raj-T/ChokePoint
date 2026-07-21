@@ -1,4 +1,4 @@
-"""Multi-format report generation for ChokePoint."""
+"""Multi-format report generation for BlastRadius."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ from rich.console import Console, ConsoleOptions, RenderResult
 from rich.panel import Panel
 from rich.table import Table
 
-from chokepoint.graph import AnalysisReport, GraphAnalyzer, GraphBuilder
-from chokepoint.models import Edge, Node, NodeType, Relationship, Topology
-from chokepoint.report.risk import (
+from blastradius.graph import AnalysisReport, GraphAnalyzer, GraphBuilder
+from blastradius.models import Edge, Node, NodeType, Relationship, Topology
+from blastradius.report.risk import (
     ConfidenceLevel,
     RiskAnalyzer,
     RiskCategory,
@@ -19,7 +19,7 @@ from chokepoint.report.risk import (
     RiskLevel,
     RiskReport,
 )
-from chokepoint.utils.text import (
+from blastradius.utils.text import (
     escape_markdown_table,
     escape_mermaid_label,
     human_join,
@@ -113,7 +113,7 @@ class GeneratedReport(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    title: str = "ChokePoint Security Report"
+    title: str = "BlastRadius Security Report"
     executive_summary: str
     risk_score: int = Field(ge=0, le=100)
     critical_dependencies: tuple[RiskFinding, ...]
@@ -154,7 +154,7 @@ class GeneratedReport(BaseModel):
 
 
 class SecurityReportGenerator:
-    """Generate security reports from ChokePoint topologies."""
+    """Generate security reports from BlastRadius topologies."""
 
     def generate(self, topology: Topology) -> GeneratedReport:
         """Generate a report from a topology.
@@ -319,7 +319,7 @@ def _executive_summary(
         if finding.risk_level == RiskLevel.CRITICAL
     )
     return (
-        f"ChokePoint analyzed {graph_report.node_count} nodes and "
+        f"BlastRadius analyzed {graph_report.node_count} nodes and "
         f"{graph_report.edge_count} dependency edges. The current risk score is "
         f"{risk_report.risk_score}/100 with {risk_report.finding_count} finding(s), "
         f"including {critical_count} critical dependency finding(s), "

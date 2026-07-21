@@ -7,7 +7,7 @@ command-line concerns remain isolated around that core.
 ## Package Layout
 
 ```text
-src/chokepoint/
+src/blastradius/
     cli/
     graph/
     models/

@@ -6,7 +6,7 @@ duplication, coupling, readability, and packaging hygiene.
 ## Fixed
 
 - Consolidated duplicated text-formatting helpers into
-  `chokepoint.utils.text`.
+  `blastradius.utils.text`.
 - Reused shared helpers for Mermaid node IDs, Mermaid label escaping, Markdown
   table escaping, and human-readable list joining.
 - Removed duplicate private helper functions from report generation and export
@@ -14,7 +14,7 @@ duplication, coupling, readability, and packaging hygiene.
 - Replaced repeated SVG layout magic numbers with named constants.
 - Split SVG export rendering into focused helpers for canvas sizing, node
   positions, SVG definitions, edge rendering, and node rendering.
-- Made utility exports explicit through `chokepoint.utils`.
+- Made utility exports explicit through `blastradius.utils`.
 
 ## Current Status
 
@@ -26,13 +26,13 @@ duplication, coupling, readability, and packaging hygiene.
 
 ## Remaining Debt
 
-- `chokepoint.report.generator` is still the largest module and contains several
+- `blastradius.report.generator` is still the largest module and contains several
   long rendering functions. It is cohesive, but future report formats should
   avoid adding more responsibilities to this module.
-- `chokepoint.parser.terraform_parser` remains large because Terraform
+- `blastradius.parser.terraform_parser` remains large because Terraform
   normalization, reference extraction, and topology construction are colocated.
   Further decomposition would be useful only if Terraform coverage expands.
-- `chokepoint.parser.yaml_parser` has several schema-normalization helpers that
+- `blastradius.parser.yaml_parser` has several schema-normalization helpers that
   are intentionally explicit. Keep parser behavior stable before extracting
   more abstractions.
 - CLI command functions are readable but centrally housed in one module. If the

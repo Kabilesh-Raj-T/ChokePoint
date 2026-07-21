@@ -1,7 +1,7 @@
 # Graph Engine
 
-The graph engine converts the ChokePoint `Topology` aggregate into a simple
-undirected `networkx.Graph`. ChokePoint models infrastructure dependency
+The graph engine converts the BlastRadius `Topology` aggregate into a simple
+undirected `networkx.Graph`. BlastRadius models infrastructure dependency
 relationships as directed topology edges, but the first analysis pass focuses on
 structural choke points in the undirected connectivity graph.
 
@@ -14,7 +14,7 @@ centrality.
 ## API
 
 ```python
-from chokepoint.graph import GraphAnalyzer, GraphBuilder
+from blastradius.graph import GraphAnalyzer, GraphBuilder
 
 graph = GraphBuilder().build(topology)
 report = GraphAnalyzer().analyze(graph)
@@ -43,6 +43,6 @@ cycles returned in the cycle basis.
 ## Validation
 
 Validation verifies that the graph is undirected, is not a multigraph, contains
-ChokePoint `Node` models on every NetworkX node, and contains preserved
-ChokePoint `Edge` models plus relationship attributes on every NetworkX edge.
+BlastRadius `Node` models on every NetworkX node, and contains preserved
+BlastRadius `Edge` models plus relationship attributes on every NetworkX edge.
 The analyzer refuses to produce an `AnalysisReport` for invalid graphs.
